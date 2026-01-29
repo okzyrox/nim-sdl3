@@ -3,3 +3,4 @@
 *.so
 
 reference/*
+test/*.dll
