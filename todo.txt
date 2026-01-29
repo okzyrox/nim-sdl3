@@ -1,0 +1,58 @@
+Sections:
+[x] SDL_version
+[x] SDL_asyncio
+[x] SDL_atomic
+[x] SDL_properties
+[x] SDL_iostream
+[x] SDL_audio
+[x] SDL_bits
+[x] SDL_blendmode
+[x] SDL_pixels
+[x] SDL_clipboard
+[x] SDL_cpuinfo
+[/] SDL_error
+    - Need to figure out varargs/va_list for setError and setErrorV
+[0] SDL_filesystem
+[0] SDL_rect
+[0] SDL_surface
+[0] SDL_video
+[0] SDL_gpu
+[0] SDL_guid
+[0] SDL_hidapi
+[0] SDL_hints
+[0] SDL_sensor
+[0] SDL_joystick
+[0] SDL_haptic
+[0] SDL_gamepad
+[0] SDL_scancode
+[0] SDL_keycode
+[0] SDL_keyboard
+[0] SDL_loadso
+[0] SDL_locale
+[0] SDL_log
+[0] SDL_messagebox
+[0] SDL_metal
+[0] SDL_vulkan
+[0] SDL_misc
+[0] SDL_mouse
+[0] SDL_mutex
+[0] SDL_pen
+[0] SDL_platform
+[0] SDL_process
+[0] SDL_storage
+[0] SDL_system
+[0] SDL_thread
+[0] SDL_time
+[0] SDL_timer
+[0] SDL_tray
+[0] SDL_touch
+[0] SDL_dialog
+[0] SDL_camera
+[0] SDL_events
+[0] SDL_render
+[0] SDL_init
+
+Experiment:
+- `var T` over `ptr T`
+
+- Simplified overloads
