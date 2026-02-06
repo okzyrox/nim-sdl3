@@ -12,9 +12,9 @@ Sections:
 [x] SDL_cpuinfo
 [/] SDL_error
     - Need to figure out varargs/va_list for setError and setErrorV
-[0] SDL_filesystem
-[0] SDL_rect
-[0] SDL_surface
+[x] SDL_filesystem
+[x] SDL_rect
+[/] SDL_surface
 [0] SDL_video
 [0] SDL_gpu
 [0] SDL_guid

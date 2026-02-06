@@ -928,10 +928,22 @@ type
 
 proc setClipboardText*(text: cstring): bool {.importc: "SDL_SetClipboardText".}
 proc getClipboardText*(): ptr uint8 {.importc: "SDL_GetClipboardText".}
+proc getClipboardTextS*(): cstring =
+  let textPtr = getClipboardText()
+  if textPtr == nil:
+    return nil
+  else:
+    return cast[cstring](textPtr)
 proc hasClipboardText*(): bool {.importc: "SDL_HasClipboardText".}
 
 proc setPrimarySelectionText*(text: cstring): bool {.importc: "SDL_SetPrimarySelectionText".}
 proc getPrimarySelectionText*(): ptr uint8 {.importc: "SDL_GetPrimarySelectionText".}
+proc getPrimarySelectionTextS*(): cstring =
+  let textPtr = getPrimarySelectionText()
+  if textPtr == nil:
+    return nil
+  else:
+    return cast[cstring](textPtr)
 proc hasPrimarySelectionText*(): bool {.importc: "SDL_HasPrimarySelectionText".}
 
 proc setClipboardData*(callback: ClipboardDataCb, cleanupCallback: ClipboardCleanupCb, userdata: pointer, mimeTypes: ptr cstring, numMimeTypes: uint): bool {.importc: "SDL_SetClipboardData".}
@@ -983,12 +995,317 @@ proc clearError*(): void {.importc: "SDL_ClearError".}
 
 ## Section: SDL_filesystem.h
 
+type
+  Folder* {.size: sizeof(cint).} = enum
+    Home
+    Desktop
+    Documents
+    Downloads
+    Music
+    Pictures
+    PublicShare
+    SavedGames
+    Screenshots
+    Templates
+    Videos
+    Count
+  PathType* {.size: sizeof(cint).} = enum
+    None
+    File
+    Directory
+    Other
+  EnumerationResult* {.size: sizeof(cint).} = enum
+    Continue
+    Success
+    Failure
+  GlobFlag* {.size: sizeof(uint32).} = enum
+    CaseSensitive = 0
+
+  PathInfo* {.bycopy.} = object
+    `type`*: PathType
+    size*: uint64
+    createTime*, accessTime*, modifyTime*: uint64
+
+  EnumerateDirectoryCb* = proc(userdata: pointer, dirName, fileName: cstring): EnumerationResult {.cdecl.}
+
+proc getBasePath*(): cstring {.importc: "SDL_GetBasePath".}
+proc getPrefPath*(org, app: cstring): ptr uint8 {.importc: "SDL_GetPrefPath".}
+proc getPrefPathS*(org, app: cstring): cstring =
+  let prefPathPtr = getPrefPath(org, app)
+  if prefPathPtr == nil:
+    return nil
+  else:
+    return cast[cstring](prefPathPtr)
+proc getUserFolder*(folder: Folder): cstring {.importc: "SDL_GetUserFolder".}
+
+proc createDirectory*(dirPath: cstring): bool {.importc: "SDL_CreateDirectory".}
+proc enumerateDirectory*(dirPath: cstring, callback: EnumerateDirectoryCb, userdata: pointer): bool {.importc: "SDL_EnumerateDirectory".}
+proc removePath*(path: cstring): bool {.importc: "SDL_RemovePath".}
+proc renamePath*(oldPath, newPath: cstring): bool {.importc: "SDL_RenamePath".}
+proc copyFile*(srdPath, dstPath: cstring): bool {.importc: "SDL_CopyFile".}
+proc getPathInfo*(path: cstring, info: ptr PathInfo): bool {.importc: "SDL_GetPathInfo".}
+proc getPathInfo*(path: cstring): PathInfo =
+  var info: PathInfo
+  if getPathInfo(path, addr info):
+    return info
+  else:
+    echo getError()
+    return PathInfo(type: PathType.None)
+proc globDirectory*(path, pattern: cstring, flags: GlobFlag, count: ptr cint): ptr ptr uint8 {.importc: "SDL_GlobDirectory".}
 
 ## Section: SDL_rect.h
 
+type
+  Point* {.bycopy.} = object
+    x*, y*: cint
+  FPoint* {.bycopy.} = object
+    x*, y*: float32
+  Rect* {.bycopy.} = object
+    x*, y*, w*, h*: cint
+  FRect* {.bycopy.} = object
+    x*, y*, w*, h*: float32
+
+proc toFRect*(rect: Rect, frect: ptr FRect): void =
+  frect.x = float32(rect.x)
+  frect.y = float32(rect.y)
+  frect.w = float32(rect.w)
+  frect.h = float32(rect.h)
+proc toFRect*(rect: Rect): FRect =
+  FRect(x: float32(rect.x), y: float32(rect.y), w: float32(rect.w), h: float32(rect.h))
+
+proc inRect*(point: Point, rect: Rect): bool =
+  (point.x >= rect.x) and (point.x < rect.x + rect.w) and (point.y >= rect.y) and (point.y < rect.y + rect.h)
+proc inRect*(point: FPoint, rect: FRect): bool =
+  (point.x >= rect.x) and (point.x < rect.x + rect.w) and (point.y >= rect.y) and (point.y < rect.y + rect.h)
+proc empty*(rect: Rect): bool =
+  (rect.w <= 0) or (rect.h <= 0)
+proc empty*(rect: FRect): bool =
+  (rect.w <= 0.0) or (rect.h <= 0.0)
+proc `==`*(r1, r2: Rect): bool =
+  (r1.x == r2.x) and (r1.y == r2.y) and (r1.w == r2.w) and (r1.h == r2.h)
+proc `==`*(r1, r2: FRect): bool =
+  (r1.x == r2.x) and (r1.y == r2.y) and (r1.w == r2.w) and (r1.h == r2.h)
+
+proc hasIntersection*(r1, r2: Rect): bool {.importc: "SDL_HasRectIntersection".}
+proc hasIntersection*(r1, r2: FRect): bool {.importc: "SDL_HasRectIntersectionFloat".}
+
+proc getIntersection*(r1, r2: Rect, result: ptr Rect): bool {.importc: "SDL_GetRectIntersection".}
+proc getIntersection*(r1, r2: FRect, result: ptr FRect): bool {.importc: "SDL_GetRectIntersectionFloat".}
+proc getIntersection*(r1, r2: Rect): Rect =
+  discard getIntersection(r1, r2, addr result)
+proc getIntersection*(r1, r2: FRect): FRect =
+  discard getIntersection(r1, r2, addr result)
+
+proc getUnion*(r1, r2: Rect, result: ptr Rect): void {.importc: "SDL_GetRectUnion".}
+proc getUnion*(r1, r2: FRect, result: ptr FRect): void {.importc: "SDL_GetRectUnionFloat".}
+
+proc getEnclosingPoints*(points: ptr Point, count: cint, clipRect: Rect, result: ptr Rect): bool {.importc: "SDL_GetRectEnclosingPoints".}
+proc getEnclosingPoints*(points: ptr FPoint, count: cint, clipRect: FRect, result: ptr FRect): bool {.importc: "SDL_GetRectEnclosingPointsFloat".}
+
+proc getIntersectionAndLine*(rect: Rect, x1, y1, x2, y2: ptr cint): bool {.importc: "SDL_GetRectAndLineIntersection".}
+proc getIntersectionAndLine*(rect: FRect, x1, y1, x2, y2: ptr float32): bool {.importc: "SDL_GetRectAndLineIntersectionFloat".}
 
 ## Section: SDL_surface.h
 
+type
+  SurfaceFlag* {.size: sizeof(uint32).} = enum
+    Preallocated = 0
+    LockNeeded = 1
+    Locked = 2
+    SimdAligned = 3
+  ScaleMode* {.size: sizeof(cint).} = enum
+    Invalid = -1
+    Nearest
+    Linear
+    Best
+  FlipMode* {.size: sizeof(cint).} = enum
+    None = 0
+    Horizontal = 1
+    Vertical = 2
+    Both = 3
+  Surface* {.bycopy.} = object
+    flags*: set[SurfaceFlag]
+    format*: PixelFormat
+    w*, h*: cint
+    pitch*: cint
+    pixels*: pointer
+
+    refCount*: cint
+    reserved*: pointer
+  SurfacePtr* = ptr Surface
+
+
+proc mustLock*(surface: SurfacePtr): bool =
+  SurfaceFlag.LockNeeded in surface.flags
+
+proc createSurface*(width, height: cint, format: PixelFormat): SurfacePtr {.importc: "SDL_CreateSurface".}
+proc createSurface*(width, height: cint, format: PixelFormat, pixels: pointer, pitch: cint): SurfacePtr {.importc: "SDL_CreateSurfaceFrom".}
+proc destroySurface*(surface: SurfacePtr): void {.importc: "SDL_DestroySurface".}
+proc destroy*(surface: SurfacePtr): void =
+  destroySurface(surface)
+
+proc getSurfaceProperties*(surface: SurfacePtr): PropertiesID {.importc: "SDL_GetSurfaceProperties".}
+proc getProperties*(surface: SurfacePtr): PropertiesID =
+  getSurfaceProperties(surface)
+
+proc setSurfaceColorspace*(surface: SurfacePtr, colorspace: ColorSpace): bool {.importc: "SDL_SetSurfaceColorspace".}
+proc setColorspace*(surface: SurfacePtr, colorspace: ColorSpace): bool {.discardable.} =
+  setSurfaceColorspace(surface, colorspace)
+proc `colorspace=`*(surface: SurfacePtr, colorspace: ColorSpace): bool {.discardable.} =
+  setSurfaceColorspace(surface, colorspace)
+
+proc getSurfaceColorspace*(surface: SurfacePtr): ColorSpace {.importc: "SDL_GetSurfaceColorspace".}
+proc getColorspace*(surface: SurfacePtr): ColorSpace =
+  getSurfaceColorspace(surface)
+proc `colorspace`*(surface: SurfacePtr): ColorSpace =
+  getSurfaceColorspace(surface)
+
+proc createSurfacePalette*(surface: SurfacePtr): PalettePtr {.importc: "SDL_CreateSurfacePalette".}
+proc createPalette*(surface: SurfacePtr): PalettePtr =
+  createSurfacePalette(surface)
+
+proc setSurfacePalette*(surface: SurfacePtr, palette: PalettePtr): bool {.importc: "SDL_SetSurfacePalette".}
+proc setPalette*(surface: SurfacePtr, palette: PalettePtr): bool {.discardable.} =
+  setSurfacePalette(surface, palette)
+proc `palette=`*(surface: SurfacePtr, palette: PalettePtr): bool {.discardable.} =
+  setSurfacePalette(surface, palette)
+
+proc getSurfacePalette*(surface: SurfacePtr): PalettePtr {.importc: "SDL_GetSurfacePalette".}
+proc getPalette*(surface: SurfacePtr): PalettePtr =
+  getSurfacePalette(surface)
+proc `palette`*(surface: SurfacePtr): PalettePtr =
+  getSurfacePalette(surface)
+
+proc addSurfaceAlternateImage*(surface, image: SurfacePtr): bool {.importc: "SDL_AddSurfaceAlternateImage".}
+proc addAlternateImage*(surface, image: SurfacePtr): bool {.discardable.} =
+  addSurfaceAlternateImage(surface, image)
+proc surfaceHasAlternateImages*(surface: SurfacePtr): bool {.importc: "SDL_SurfaceHasAlternateImages".}
+proc hasAlternateImages*(surface: SurfacePtr): bool =
+  surfaceHasAlternateImages(surface)
+proc getSurfaceImages*(surface: SurfacePtr, count: ptr cint): ptr SurfacePtr {.importc: "SDL_GetSurfaceImages".}
+proc getImages*(surface: SurfacePtr, count: ptr cint): ptr SurfacePtr =
+  getSurfaceImages(surface, count)
+proc `images`*(surface: SurfacePtr, count: ptr cint): ptr SurfacePtr =
+  getSurfaceImages(surface, count)
+proc removeSurfaceAlternateImages*(surface: SurfacePtr): void {.importc: "SDL_RemoveSurfaceAlternateImages".}
+proc removeAlternateImages*(surface: SurfacePtr): void =
+  removeSurfaceAlternateImages(surface)
+
+proc lockSurface*(surface: SurfacePtr): bool {.importc: "SDL_LockSurface".}
+proc lock*(surface: SurfacePtr): bool =
+  lockSurface(surface)
+proc unlockSurface*(surface: SurfacePtr): void {.importc: "SDL_UnlockSurface".}
+proc unlock*(surface: SurfacePtr): void =
+  unlockSurface(surface)
+
+proc loadSurface*(src: IOStreamPtr, closeIo: bool): SurfacePtr {.importc: "SDL_LoadSurface_IO".}
+proc loadSurface*(file: cstring): SurfacePtr {.importc: "SDL_LoadSurface".}
+
+proc loadBMP*(src: IOStreamPtr, closeIo: bool): SurfacePtr {.importc: "SDL_LoadBMP_IO".}
+proc loadBMP*(file: cstring): SurfacePtr {.importc: "SDL_LoadBMP".}
+proc saveBMP*(surface: SurfacePtr, dst: IOStreamPtr, closeIo: bool): bool {.importc: "SDL_SaveBMP_IO".}
+proc saveBMP*(surface: SurfacePtr, file: cstring): bool {.importc: "SDL_SaveBMP".}
+proc loadPNG*(src: IOStreamPtr, closeIo: bool): SurfacePtr {.importc: "SDL_LoadPNG_IO".}
+proc loadPNG*(file: cstring): SurfacePtr {.importc: "SDL_LoadPNG".}
+proc savePNG*(surface: SurfacePtr, dst: IOStreamPtr, closeIo: bool): bool {.importc: "SDL_SavePNG_IO".}
+proc savePNG*(surface: SurfacePtr, file: cstring): bool {.importc: "SDL_SavePNG".}
+
+proc setSurfaceRLE*(surface: SurfacePtr, enabled: bool): bool {.importc: "SDL_SetSurfaceRLE".}
+proc setRLE*(surface: SurfacePtr, enabled: bool): bool {.discardable.} =
+  setSurfaceRLE(surface, enabled)
+proc surfaceHasRLE*(surface: SurfacePtr): bool {.importc: "SDL_SurfaceHasRLE".}
+proc hasRLE*(surface: SurfacePtr): bool =
+  surfaceHasRLE(surface)
+
+proc setSurfaceColorKey*(surface: SurfacePtr, enabled: bool, key: uint32): bool {.importc: "SDL_SetSurfaceColorKey".}
+proc setColorKey*(surface: SurfacePtr, enabled: bool, key: uint32): bool {.discardable.} =
+  setSurfaceColorKey(surface, enabled, key)
+proc `colorKey=`*(surface: SurfacePtr, enabled: bool, key: uint32): bool {.discardable.} =
+  setSurfaceColorKey(surface, enabled, key)
+
+proc surfaceHasColorKey*(surface: SurfacePtr): bool {.importc: "SDL_SurfaceHasColorKey".}
+proc hasColorKey*(surface: SurfacePtr): bool =
+  surfaceHasColorKey(surface)
+proc getSurfaceColorKey*(surface: SurfacePtr, key: ptr uint32): bool {.importc: "SDL_GetSurfaceColorKey".}
+proc getSurfaceColorKey*(surface: SurfacePtr): uint32 =
+  var key: uint32
+  if getSurfaceColorKey(surface, addr key):
+    return key
+  else:
+    echo getError()
+    return 0
+proc getColorKey*(surface: SurfacePtr, key: ptr uint32): bool {.discardable.} =
+  getSurfaceColorKey(surface, key)
+proc getColorKey*(surface: SurfacePtr): uint32 =
+  getSurfaceColorKey(surface)
+proc `colorKey`*(surface: SurfacePtr): uint32 =
+  getSurfaceColorKey(surface)
+
+proc setSurfaceColorMod*(surface: SurfacePtr, r, g, b: uint8): bool {.importc: "SDL_SetSurfaceColorMod".}
+proc setColorMod*(surface: SurfacePtr, r, g, b: uint8): bool {.discardable.} =
+  setSurfaceColorMod(surface, r, g, b)
+proc getSurfaceColorMod*(surface: SurfacePtr, r, g, b: ptr uint8): bool {.importc: "SDL_GetSurfaceColorMod".}
+proc getColorMod*(surface: SurfacePtr, r, g, b: ptr uint8): bool {.discardable.} =
+  getSurfaceColorMod(surface, r, g, b)
+proc getColorMod*(surface: SurfacePtr): (uint8, uint8, uint8) =
+  var r, g, b: uint8
+  if getSurfaceColorMod(surface, addr r, addr g, addr b):
+    return (r, g, b)
+  else:
+    echo getError()
+    return (0, 0, 0)
+
+proc setSurfaceAlphaMod*(surface: SurfacePtr, alpha: uint8): bool {.importc: "SDL_SetSurfaceAlphaMod".}
+proc setAlphaMod*(surface: SurfacePtr, alpha: uint8): bool {.discardable.} =
+  setSurfaceAlphaMod(surface, alpha)
+proc `alphaMod=`*(surface: SurfacePtr, alpha: uint8): bool {.discardable.} =
+  setSurfaceAlphaMod(surface, alpha)
+proc getSurfaceAlphaMod*(surface: SurfacePtr, alpha: ptr uint8): bool {.importc: "SDL_GetSurfaceAlphaMod".}
+proc getAlphaMod*(surface: SurfacePtr, alpha: ptr uint8): bool {.discardable.} = 
+  getSurfaceAlphaMod(surface, alpha)
+proc getAlphaMod*(surface: SurfacePtr): uint8 =
+  var alpha: uint8
+  if getSurfaceAlphaMod(surface, addr alpha):
+    return alpha
+  else:
+    echo getError()
+    return 0
+proc `alphaMod`*(surface: SurfacePtr): uint8 =
+  getAlphaMod(surface)
+
+#[ 
+	SetSurfaceBlendMode          :: proc(surface: ^Surface, blendMode: BlendMode) -> bool ---
+	GetSurfaceBlendMode          :: proc(surface: ^Surface, blendMode: ^BlendMode) -> bool ---
+	SetSurfaceClipRect           :: proc(surface: ^Surface, rect: Maybe(^Rect)) -> bool ---
+	GetSurfaceClipRect           :: proc(surface: ^Surface, rect: ^Rect) -> bool ---
+	FlipSurface                  :: proc(surface: ^Surface, flip: FlipMode) -> bool ---
+	RotateSurface                :: proc(surface: ^Surface, angle: f32) -> ^Surface ---
+	DuplicateSurface             :: proc(surface: ^Surface) -> ^Surface ---
+	ScaleSurface                 :: proc(surface: ^Surface, width, height: c.int, scaleMode: ScaleMode) -> ^Surface ---
+	ConvertSurface               :: proc(surface: ^Surface, format: PixelFormat) -> ^Surface ---
+	ConvertSurfaceAndColorspace  :: proc(surface: ^Surface, format: PixelFormat, palette: ^Palette, colorspace: Colorspace, props: PropertiesID) -> ^Surface ---
+	ConvertPixels                :: proc(width, height: c.int, src_format: PixelFormat, src: rawptr, src_pitch: c.int, dst_format: PixelFormat, dst: rawptr, dst_pitch: c.int) -> bool ---
+	ConvertPixelsAndColorspace   :: proc(width, height: c.int, src_format: PixelFormat, src_colorspace: Colorspace, src_properties: PropertiesID, src: rawptr, src_pitch: c.int, dst_format: PixelFormat, dst_colorspace: Colorspace, dst_properties: PropertiesID, dst: rawptr, dst_pitch: c.int) -> bool ---
+	PremultiplyAlpha             :: proc(width, height: c.int, src_format: PixelFormat, src: rawptr, src_pitch: c.int, dst_format: PixelFormat, dst: rawptr, dst_pitch: c.int, linear: bool) -> bool ---
+	PremultiplySurfaceAlpha      :: proc(surface: ^Surface, linear: bool) -> bool ---
+	ClearSurface                 :: proc(surface: ^Surface, r, g, b, a: f32) -> bool ---
+	FillSurfaceRect              :: proc(dst: ^Surface, rect: Maybe(^Rect), color: Uint32) -> bool ---
+	FillSurfaceRects             :: proc(dst: ^Surface, rects: [^]Rect, count: c.int, color: Uint32) -> bool ---
+	BlitSurface                  :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
+	BlitSurfaceUnchecked         :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
+	BlitSurfaceScaled            :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect), scaleMode: ScaleMode) -> bool ---
+	BlitSurfaceUncheckedScaled   :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect), scaleMode: ScaleMode) -> bool ---
+	StretchSurface               :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect), scaleMode: ScaleMode) -> bool ---
+	BlitSurfaceTiled             :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
+	BlitSurfaceTiledWithScale    :: proc(src: ^Surface, srcrect: Maybe(^Rect), scale: f32, scaleMode: ScaleMode, dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
+	BlitSurface9Grid             :: proc(src: ^Surface, srcrect: Maybe(^Rect), left_width, right_width, top_height, bottom_height: c.int, scale: f32, scaleMode: ScaleMode, dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
+	MapSurfaceRGB                :: proc(surface: ^Surface, r, g, b: Uint8) -> Uint32 ---
+	MapSurfaceRGBA               :: proc(surface: ^Surface, r, g, b, a: Uint8) -> Uint32 ---
+	ReadSurfacePixel             :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: ^Uint8) -> bool ---
+	ReadSurfacePixelFloat        :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: ^f32) -> bool ---
+	WriteSurfacePixel            :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: Uint8) -> bool ---
+	WriteSurfacePixelFloat       :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: f32) -> bool ---
+ ]#
 
 ## Section: SDL_video.h
 
