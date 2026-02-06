@@ -20,6 +20,9 @@ else:
   {.push callConv: cdecl, dynlib: LibName.}
 
 
+type stub = distinct
+
+
 ## Section: SDL_version.h
 
 const
@@ -1273,24 +1276,81 @@ proc getAlphaMod*(surface: SurfacePtr): uint8 =
 proc `alphaMod`*(surface: SurfacePtr): uint8 =
   getAlphaMod(surface)
 
+proc setSurfaceBlendMode*(surface: SurfacePtr, blendMode: BlendMode): bool {.importc: "SDL_SetSurfaceBlendMode".}
+proc setBlendMode*(surface: SurfacePtr, blendMode: BlendMode): bool {.discardable.} =
+  setSurfaceBlendMode(surface, blendMode)
+proc `blendMode=`*(surface: SurfacePtr, blendMode: BlendMode): bool {.discardable.} =
+  setSurfaceBlendMode(surface, blendMode)
+proc getSurfaceBlendMode*(surface: SurfacePtr, blendMode: ptr BlendMode): bool {.importc: "SDL_GetSurfaceBlendMode".}
+proc getBlendMode*(surface: SurfacePtr, blendMode: ptr BlendMode): bool {.discardable.} =
+  getSurfaceBlendMode(surface, blendMode)
+proc getBlendMode*(surface: SurfacePtr): BlendMode =
+  var blendMode: BlendMode
+  if getSurfaceBlendMode(surface, addr blendMode):
+    return blendMode
+  else:
+    echo getError()
+    return BLENDMODE_NONE
+proc `blendMode`*(surface: SurfacePtr): BlendMode =
+  getBlendMode(surface)
+
+proc setSurfaceClipRect*(surface: SurfacePtr, rect: ptr Rect = nil): bool {.importc: "SDL_SetSurfaceClipRect".}
+proc setClipRect*(surface: SurfacePtr, rect: ptr Rect = nil): bool {.discardable.} =
+  setSurfaceClipRect(surface, rect)
+proc getSurfaceClipRect*(surface: SurfacePtr, rect: ptr Rect): bool {.importc: "SDL_GetSurfaceClipRect".}
+proc getClipRect*(surface: SurfacePtr, rect: ptr Rect): bool {.discardable.} =
+  getSurfaceClipRect(surface, rect)
+proc getClipRect*(surface: SurfacePtr): ptr Rect =
+  var rect: Rect
+  if getSurfaceClipRect(surface, addr rect):
+    return addr rect
+  else:
+    echo getError()
+    return nil
+
+proc flipSurface*(surface: SurfacePtr, flip: FlipMode): bool {.importc: "SDL_FlipSurface".}
+proc flip*(surface: SurfacePtr, flip: FlipMode): bool {.discardable.} =
+  flipSurface(surface, flip)
+proc rotateSurface*(surface: SurfacePtr, angle: float32): SurfacePtr {.importc: "SDL_RotateSurface".}
+proc rotate*(surface: SurfacePtr, angle: float32): SurfacePtr =
+  rotateSurface(surface, angle)
+proc duplicateSurface*(surface: SurfacePtr): SurfacePtr {.importc: "SDL_DuplicateSurface".}
+proc duplicate*(surface: SurfacePtr): SurfacePtr =
+  duplicateSurface(surface)
+proc scaleSurface*(surface: SurfacePtr, width, height: cint, scaleMode: ScaleMode): SurfacePtr {.importc: "SDL_ScaleSurface".}
+proc scale*(surface: SurfacePtr, width, height: cint, scaleMode: ScaleMode): SurfacePtr =
+  scaleSurface(surface, width, height, scaleMode)
+
+proc convertSurface*(surface: SurfacePtr, format: PixelFormat): SurfacePtr {.importc: "SDL_ConvertSurface".}
+proc convert*(surface: SurfacePtr, format: PixelFormat): SurfacePtr =
+  convertSurface(surface, format)
+proc convertSurfaceAndColorspace*(surface: SurfacePtr, format: PixelFormat, palette: PalettePtr, colorspace: ColorSpace, props: PropertiesID): SurfacePtr {.importc: "SDL_ConvertSurfaceAndColorspace".}
+proc convert*(surface: SurfacePtr, format: PixelFormat, palette: PalettePtr, colorspace: ColorSpace, props: PropertiesID): SurfacePtr =
+  convertSurfaceAndColorspace(surface, format, palette, colorspace, props)
+proc convertPixels*(width, height: cint, srcFormat: PixelFormat, src: pointer, srcPitch: cint, dstFormat: PixelFormat, dst: pointer, dstPitch: cint): bool {.importc: "SDL_ConvertPixels".}
+proc convert*(width, height: cint, srcFormat: PixelFormat, src: pointer, srcPitch: cint, dstFormat: PixelFormat, dst: pointer, dstPitch: cint): bool =
+  convertPixels(width, height, srcFormat, src, srcPitch, dstFormat, dst, dstPitch)
+proc convertPixelsAndColorspace*(width, height: cint, srcFormat: PixelFormat, srcColorspace: ColorSpace, srcProps: PropertiesID, src: pointer, srcPitch: cint, dstFormat: PixelFormat, dstColorspace: ColorSpace, dstProps: PropertiesID, dst: pointer, dstPitch: cint): bool {.importc: "SDL_ConvertPixelsAndColorspace".}
+proc convert*(width, height: cint, srcFormat: PixelFormat, srcColorspace: ColorSpace, srcProps: PropertiesID, src: pointer, srcPitch: cint, dstFormat: PixelFormat, dstColorspace: ColorSpace, dstProps: PropertiesID, dst: pointer, dstPitch: cint): bool =
+  convertPixelsAndColorspace(width, height, srcFormat, srcColorspace, srcProps, src, srcPitch, dstFormat, dstColorspace, dstProps, dst, dstPitch)
+
+proc premultiplyAlpha*(width, height: cint, srcFormat: PixelFormat, src: pointer, srcPitch: cint, dstFormat: PixelFormat, dst: pointer, dstPitch: cint, linear: bool): bool {.importc: "SDL_PremultiplyAlpha".}
+proc premultiplySurfaceAlpha*(surface: SurfacePtr, linear: bool): bool {.importc: "SDL_PremultiplySurfaceAlpha".}
+proc premultiplyAlpha*(surface: SurfacePtr, linear: bool): bool =
+  premultiplySurfaceAlpha(surface, linear)
+
+proc clearSurface*(surface: SurfacePtr, r, g, b, a: float32): bool {.importc: "SDL_ClearSurface".}
+proc clear*(surface: SurfacePtr, r, g, b, a: float32): bool =
+  clearSurface(surface, r, g, b, a)
+
+proc fillSurfaceRect*(surface: SurfacePtr, rect: ptr Rect = nil, color: uint32): bool {.importc: "SDL_FillSurfaceRect".}
+proc fillRect*(surface: SurfacePtr, rect: ptr Rect = nil, color: uint32): bool {.discardable.} =
+  fillSurfaceRect(surface, rect, color)
+proc fillSurfaceRects*(surface: SurfacePtr, rects: ptr UncheckedArray[Rect], count: cint, color: uint32): bool {.importc: "SDL_FillSurfaceRects".}
+proc fillRects*(surface: SurfacePtr, rects: ptr UncheckedArray[Rect], count: cint, color: uint32): bool {.discardable.} =
+  fillSurfaceRects(surface, rects, count, color)
+
 #[ 
-	SetSurfaceBlendMode          :: proc(surface: ^Surface, blendMode: BlendMode) -> bool ---
-	GetSurfaceBlendMode          :: proc(surface: ^Surface, blendMode: ^BlendMode) -> bool ---
-	SetSurfaceClipRect           :: proc(surface: ^Surface, rect: Maybe(^Rect)) -> bool ---
-	GetSurfaceClipRect           :: proc(surface: ^Surface, rect: ^Rect) -> bool ---
-	FlipSurface                  :: proc(surface: ^Surface, flip: FlipMode) -> bool ---
-	RotateSurface                :: proc(surface: ^Surface, angle: f32) -> ^Surface ---
-	DuplicateSurface             :: proc(surface: ^Surface) -> ^Surface ---
-	ScaleSurface                 :: proc(surface: ^Surface, width, height: c.int, scaleMode: ScaleMode) -> ^Surface ---
-	ConvertSurface               :: proc(surface: ^Surface, format: PixelFormat) -> ^Surface ---
-	ConvertSurfaceAndColorspace  :: proc(surface: ^Surface, format: PixelFormat, palette: ^Palette, colorspace: Colorspace, props: PropertiesID) -> ^Surface ---
-	ConvertPixels                :: proc(width, height: c.int, src_format: PixelFormat, src: rawptr, src_pitch: c.int, dst_format: PixelFormat, dst: rawptr, dst_pitch: c.int) -> bool ---
-	ConvertPixelsAndColorspace   :: proc(width, height: c.int, src_format: PixelFormat, src_colorspace: Colorspace, src_properties: PropertiesID, src: rawptr, src_pitch: c.int, dst_format: PixelFormat, dst_colorspace: Colorspace, dst_properties: PropertiesID, dst: rawptr, dst_pitch: c.int) -> bool ---
-	PremultiplyAlpha             :: proc(width, height: c.int, src_format: PixelFormat, src: rawptr, src_pitch: c.int, dst_format: PixelFormat, dst: rawptr, dst_pitch: c.int, linear: bool) -> bool ---
-	PremultiplySurfaceAlpha      :: proc(surface: ^Surface, linear: bool) -> bool ---
-	ClearSurface                 :: proc(surface: ^Surface, r, g, b, a: f32) -> bool ---
-	FillSurfaceRect              :: proc(dst: ^Surface, rect: Maybe(^Rect), color: Uint32) -> bool ---
-	FillSurfaceRects             :: proc(dst: ^Surface, rects: [^]Rect, count: c.int, color: Uint32) -> bool ---
 	BlitSurface                  :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
 	BlitSurfaceUnchecked         :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
 	BlitSurfaceScaled            :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect), scaleMode: ScaleMode) -> bool ---
@@ -1309,6 +1369,135 @@ proc `alphaMod`*(surface: SurfacePtr): uint8 =
 
 ## Section: SDL_video.h
 
+type
+  DisplayID* = distinct uint32
+  WindowID* = distinct uint32
+  SystemTheme* {.size: sizeof(cint).} = enum
+    Unknown
+    Light
+    Dark
+  DisplayOrientation* {.size: sizeof(cint).} = enum
+    Unknown
+    Landscape
+    LandscapeFlipped
+    Portrait
+    PortraitFlipped
+  FlashOperation* {.size: sizeof(cint).} = enum
+    Cancel
+    Briefly
+    UntilFocused
+  ProgressState* {.size: sizeof(cint).} = enum
+    Invalid = -1
+    None
+    Indeterminate
+    Normal
+    Paused
+    Error
+  WindowFlag* {.size: sizeof(uint64).} = enum
+    Fullscreen = 0
+    OpenGL = 1
+    Occluded = 2
+    Hidden = 3
+    Borderless = 4
+    Resizable = 5
+    Minimized = 6
+    Maximized = 7
+    MouseGrabbed = 8
+    InputFocus = 9
+    MouseFocus = 10
+    External = 11
+    Modal = 12
+    HighPixelDensity = 13
+    MouseCapture = 14
+    MouseRelativeMode = 15
+    AlwaysOnTop = 16
+    Utility = 17
+    Tooltip = 18
+    PopupMenu = 19
+    KeyboardGrabbed = 20
+    FillDocument = 21
+
+    Vulkan = 28
+    Metal = 29
+    Transparent = 30
+    NotFocusable = 31
+  WindowFlags*[E: WindowFlag] = distinct uint64
+
+  ## GL
+  EGLDisplay* = distinct pointer
+  EGLConfig* = distinct pointer
+  EGLSurface* = distinct pointer
+  EGLAttrib* = distinct pointer
+  EGLint* = distinct cint
+
+  EGLAttribArrayCb* = proc(userdata: pointer): ptr EGLAttrib {.cdecl.}
+  EGLintArrayCb* = proc(userdata: pointer, display: EGLDisplay, config: EGLConfig): ptr UncheckedArray[EGLint] {.cdecl.}
+
+  GLAttr* {.size: sizeof(cint).} = enum
+    RedSize
+    GreenSize
+    BlueSize
+    AlphaSize
+    BufferSize
+    DoubleBuffer
+    DepthSize
+    StencilSize
+    AccumRedSize
+    AccumGreenSize
+    AccumBlueSize
+    AccumAlphaSize
+    Stereo
+    MultisampleBuffers
+    MultisampleSamples
+    AcceleratedVisual
+    RetainedBacking
+    ContextMajorVersion
+    ContextMinorVersion
+    ContextFlags
+    ContextProfileMask
+    ShareWithCurrentContext
+    FramebufferSRGBCapable
+    ContextReleaseBehavior
+    ContextResetNotification
+    ContextNoError
+    FloatBuffers
+    EGLPlatform
+  GLProfileFlag* {.size: sizeof(uint32).} = enum
+    Core = 0
+    Compatibility = 1
+    ES = 2
+  GLProfileFlags* = distinct set[GLProfileFlag]
+  GLContextFlag* {.size: sizeof(uint32).} = enum
+    Debug = 0
+    ForwardCompatible = 1
+    RobustAccess = 2
+    ResetIsolation = 3
+  GLContextFlags* = distinct set[GLContextFlag]
+  GLContextReleaseFlagBit* {.size: sizeof(uint32).} = enum
+    Flush = 0
+  GLContextReleaseFlags* = distinct set[GLContextReleaseFlagBit]
+  GLContextResetNotificationFlag* {.size: sizeof(uint32).} = enum
+    LoseContext = 0
+  GLContextResetNotificationFlags* = distinct set[GLContextResetNotificationFlag]
+
+  ## HitTest
+  HitTestResult* {.size: sizeof(cint).} = enum
+    Normal
+    Draggable
+    ResizeTopLeft
+    ResizeTop
+    ResizeTopRight
+    ResizeRight
+    ResizeBottomRight
+    ResizeBottom
+    ResizeBottomLeft
+    ResizeLeft
+
+proc flags*[E: WindowFlag](e: varargs[E]): WindowFlags[E] {.inline.} =
+  var res: uint64 = 0
+  for val in items(e):
+    res = res or uint64(val)
+  WindowFlag[E](res)
 
 ## Section: SDL_gpu.h
 
@@ -1414,5 +1603,46 @@ proc `alphaMod`*(surface: SurfacePtr): uint8 =
 
 ## Section: SDL_init.h
 
+type
+  InitFlag* {.size: sizeof(uint32).} = enum
+    Audio = 4
+    Video = 5
+    Joystick = 9
+    Haptic = 12
+    Gamepad = 13
+    Events = 14
+    Sensor = 15
+    Camera = 16
+  InitFlags*[E: InitFlag] = distinct uint32
+
+  AppResult* {.size: sizeof(cint).} = enum
+    Continue
+    Success
+    Failure
+  AppInitFn* = stub
+  AppIterateFn* = stub
+  AppEventFn* = stub
+  AppQuitFn* = stub
+  MainThreadCallback* = stub
+
+## thanks Naylib!
+proc flags*[E: InitFlag](e: varargs[E]): InitFlags[E] {.inline.} =
+  var res: uint32 = 0
+  for val in items(e):
+    res = res or uint32(val)
+  InitFlags[E](res)
+
+proc init*(flags: InitFlags[InitFlag]): bool {.importc: "SDL_Init".}
+proc initSubSystem*(flags: InitFlags[InitFlag]): bool {.importc: "SDL_InitSubSystem".}
+proc quitSubSystem*(flags: InitFlags[InitFlag]): void {.importc: "SDL_QuitSubSystem".}
+proc quit*(): void {.importc: "SDL_Quit".}
+proc wasInit*(flags: InitFlags[InitFlag]): InitFlags[InitFlag] {.importc: "SDL_WasInit".}
+
+proc isMainThread*(): bool {.importc: "SDL_IsMainThread".}
+proc runOnMainThread*(callback: MainThreadCallback, userdata: pointer, waitComplete: bool): bool {.importc: "SDL_RunOnMainThread".}
+
+proc setAppMetadata*(appName, appVersion, appIdentifier: cstring): bool {.importc: "SDL_SetAppMetadata".}
+proc setAppMetadataProperty*(property: cstring, value: cstring): bool {.importc: "SDL_SetAppMetadataProperty".}
+proc getAppMetadataProperty*(property: cstring): cstring {.importc: "SDL_GetAppMetadataProperty".}
 
 {.pop.}
