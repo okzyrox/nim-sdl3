@@ -14,7 +14,7 @@ Sections:
     - Need to figure out varargs/va_list for setError and setErrorV
 [x] SDL_filesystem
 [x] SDL_rect
-[/] SDL_surface
+[x] SDL_surface
 [/] SDL_video
 [0] SDL_gpu
 [0] SDL_guid
@@ -48,8 +48,8 @@ Sections:
 [0] SDL_touch
 [0] SDL_dialog
 [0] SDL_camera
-[0] SDL_events
-[0] SDL_render
+[/] SDL_events
+[/] SDL_render
 [/] SDL_init
 
 [0] documentation

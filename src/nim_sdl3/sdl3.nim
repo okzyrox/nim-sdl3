@@ -571,12 +571,12 @@ proc openAudioDeviceStream*(deviceID: AudioDeviceID, spec: AudioSpecPtr, callbac
 proc openStream*(deviceID: AudioDeviceID, spec: AudioSpecPtr, callback: AudioStreamCb, userdata: pointer): AudioStreamPtr =
   openAudioDeviceStream(deviceID, spec, callback, userdata)
 
-proc loadWavIO*(src: IOStreamPtr, closeIo: bool, spec: AudioSpecPtr, audioBuf: ptr ptr uint8, audioLen: ptr uint32): bool {.importc: "SDL_LoadWAV_IO".}
-proc loadWav*(src: IOStreamPtr, spec: AudioSpecPtr, closeIo: bool, audioBuf: ptr ptr uint8, audioLen: ptr uint32): bool =
+proc loadWavIO*(src: IOStreamPtr, closeIo: bool, spec: AudioSpecPtr, audioBuf: ptr UncheckedArray[ptr uint8], audioLen: ptr uint32): bool {.importc: "SDL_LoadWAV_IO".}
+proc loadWav*(src: IOStreamPtr, spec: AudioSpecPtr, closeIo: bool, audioBuf: ptr UncheckedArray[ptr uint8], audioLen: ptr uint32): bool =
   loadWavIO(src, closeIo, spec, audioBuf, audioLen)
-proc loadWav*(path: cstring, spec: AudioSpecPtr, audioBuf: ptr ptr uint8, audioLen: ptr uint32): bool {.importc: "SDL_LoadWAV".}
+proc loadWav*(path: cstring, spec: AudioSpecPtr, audioBuf: ptr UncheckedArray[ptr uint8], audioLen: ptr uint32): bool {.importc: "SDL_LoadWAV".}
 proc mixAudio*(dst, src: ptr uint8, format: AudioFormat, len: uint32, volume: float32): bool {.importc: "SDL_MixAudio".}
-proc convertAudioSamples*(srcSpec: AudioSpecPtr, srcData: ptr uint8, srcLen: cint, dstSpec: AudioSpecPtr, dstData: ptr ptr uint8, dstLen: ptr cint): bool {.importc: "SDL_ConvertAudioSamples".}
+proc convertAudioSamples*(srcSpec: AudioSpecPtr, srcData: ptr uint8, srcLen: cint, dstSpec: AudioSpecPtr, dstData: ptr UncheckedArray[ptr uint8], dstLen: ptr cint): bool {.importc: "SDL_ConvertAudioSamples".}
 
 proc getAudioFormatName*(format: AudioFormat): cstring {.importc: "SDL_GetAudioFormatName".}
 proc getName*(format: AudioFormat): cstring =
@@ -953,7 +953,7 @@ proc setClipboardData*(callback: ClipboardDataCb, cleanupCallback: ClipboardClea
 proc clearClipboardData*(): void {.importc: "SDL_ClearClipboardData".}
 proc getClipboardData*(mimeType: cstring, size: ptr uint): pointer {.importc: "SDL_GetClipboardData".}
 proc hasClipboardData*(mimeType: cstring): bool {.importc: "SDL_HasClipboardData".}
-proc getClipboardMimeTypes*(numMimeTypes: ptr uint): ptr ptr uint8 {.importc: "SDL_GetClipboardMimeTypes".}
+proc getClipboardMimeTypes*(numMimeTypes: ptr uint): ptr UncheckedArray[ptr uint8] {.importc: "SDL_GetClipboardMimeTypes".}
 
 ## Section: SDL_cpuinfo.h
 
@@ -1054,7 +1054,7 @@ proc getPathInfo*(path: cstring): PathInfo =
   else:
     echo getError()
     return PathInfo(type: PathType.None)
-proc globDirectory*(path, pattern: cstring, flags: GlobFlag, count: ptr cint): ptr ptr uint8 {.importc: "SDL_GlobDirectory".}
+proc globDirectory*(path, pattern: cstring, flags: GlobFlag, count: ptr cint): ptr UncheckedArray[ptr uint8] {.importc: "SDL_GlobDirectory".}
 
 ## Section: SDL_rect.h
 
@@ -1350,22 +1350,71 @@ proc fillSurfaceRects*(surface: SurfacePtr, rects: ptr UncheckedArray[Rect], cou
 proc fillRects*(surface: SurfacePtr, rects: ptr UncheckedArray[Rect], count: cint, color: uint32): bool {.discardable.} =
   fillSurfaceRects(surface, rects, count, color)
 
-#[ 
-	BlitSurface                  :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
-	BlitSurfaceUnchecked         :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
-	BlitSurfaceScaled            :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect), scaleMode: ScaleMode) -> bool ---
-	BlitSurfaceUncheckedScaled   :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect), scaleMode: ScaleMode) -> bool ---
-	StretchSurface               :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect), scaleMode: ScaleMode) -> bool ---
-	BlitSurfaceTiled             :: proc(src: ^Surface, srcrect: Maybe(^Rect), dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
-	BlitSurfaceTiledWithScale    :: proc(src: ^Surface, srcrect: Maybe(^Rect), scale: f32, scaleMode: ScaleMode, dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
-	BlitSurface9Grid             :: proc(src: ^Surface, srcrect: Maybe(^Rect), left_width, right_width, top_height, bottom_height: c.int, scale: f32, scaleMode: ScaleMode, dst: ^Surface, dstrect: Maybe(^Rect)) -> bool ---
-	MapSurfaceRGB                :: proc(surface: ^Surface, r, g, b: Uint8) -> Uint32 ---
-	MapSurfaceRGBA               :: proc(surface: ^Surface, r, g, b, a: Uint8) -> Uint32 ---
-	ReadSurfacePixel             :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: ^Uint8) -> bool ---
-	ReadSurfacePixelFloat        :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: ^f32) -> bool ---
-	WriteSurfacePixel            :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: Uint8) -> bool ---
-	WriteSurfacePixelFloat       :: proc(surface: ^Surface, x, y: c.int, r, g, b, a: f32) -> bool ---
- ]#
+proc blitSurface*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.importc: "SDL_BlitSurface".}
+proc blit*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.discardable.} =
+  blitSurface(src, srcRect, dst, dstRect)
+proc blitSurfaceUnchecked*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.importc: "SDL_BlitSurfaceUnchecked".}
+proc blitUnchecked*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.discardable.} =
+  blitSurfaceUnchecked(src, srcRect, dst, dstRect)
+
+proc blitSurfaceScaled*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil, scaleMode: ScaleMode): bool {.importc: "SDL_BlitSurfaceScaled".}
+proc blitScaled*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil, scaleMode: ScaleMode): bool {.discardable.} =
+  blitSurfaceScaled(src, srcRect, dst, dstRect, scaleMode)
+proc blitSurfaceUncheckedScaled*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil, scaleMode: ScaleMode): bool {.importc: "SDL_BlitSurfaceUncheckedScaled".}
+proc blitUncheckedScaled*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil, scaleMode: ScaleMode): bool {.discardable.} =
+  blitSurfaceUncheckedScaled(src, srcRect, dst, dstRect, scaleMode)
+
+proc blitSurfaceTiled*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.importc: "SDL_BlitSurfaceTiled".}
+proc blitTiled*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.discardable.} =
+  blitSurfaceTiled(src, srcRect, dst, dstRect)
+proc blitSurfaceTiledWithScale*(src: SurfacePtr, srcRect: ptr Rect = nil, scale: float32, scaleMode: ScaleMode, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.importc: "SDL_BlitSurfaceTiledWithScale".}
+proc blitTiledWithScale*(src: SurfacePtr, srcRect: ptr Rect = nil, scale: float32, scaleMode: ScaleMode, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.discardable.} =
+  blitSurfaceTiledWithScale(src, srcRect, scale, scaleMode, dst, dstRect)
+proc blitSurface9Grid*(src: SurfacePtr, srcRect: ptr Rect = nil, leftWidth, rightWidth, topHeight, bottomHeight: cint, scale: float32, scaleMode: ScaleMode, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.importc: "SDL_BlitSurface9Grid".}
+proc blit9Grid*(src: SurfacePtr, srcRect: ptr Rect = nil, leftWidth, rightWidth, topHeight, bottomHeight: cint, scale: float32, scaleMode: ScaleMode, dst: SurfacePtr, dstRect: ptr Rect = nil): bool {.discardable.} =
+  blitSurface9Grid(src, srcRect, leftWidth, rightWidth, topHeight, bottomHeight, scale, scaleMode, dst, dstRect)
+
+proc stretchSurface*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil, scaleMode: ScaleMode): bool {.importc: "SDL_StretchSurface".}
+proc stretch*(src: SurfacePtr, srcRect: ptr Rect = nil, dst: SurfacePtr, dstRect: ptr Rect = nil, scaleMode: ScaleMode): bool {.discardable.} =
+  stretchSurface(src, srcRect, dst, dstRect, scaleMode)
+
+proc mapSurfaceRGB*(surface: SurfacePtr, r, g, b: uint8): uint32 {.importc: "SDL_MapSurfaceRGB".}
+proc mapRGB*(surface: SurfacePtr, r, g, b: uint8): uint32 =
+  mapSurfaceRGB(surface, r, g, b)
+
+proc mapSurfaceRGBA*(surface: SurfacePtr, r, g, b, a: uint8): uint32 {.importc: "SDL_MapSurfaceRGBA".}
+proc mapRGBA*(surface: SurfacePtr, r, g, b, a: uint8): uint32 =
+  mapSurfaceRGBA(surface, r, g, b, a)
+
+proc readSurfacePixel*(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr uint8): bool {.importc: "SDL_ReadSurfacePixel".}
+proc readPixel*(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr uint8): bool {.discardable.} =
+  readSurfacePixel(surface, x, y, r, g, b, a)
+proc readPixel*(surface: SurfacePtr, x, y: cint): (uint8, uint8, uint8, uint8) =
+  var r, g, b, a: uint8
+  if readSurfacePixel(surface, x, y, addr r, addr g, addr b, addr a):
+    return (r, g, b, a)
+  else:
+    echo getError()
+    return (0, 0, 0, 0)
+
+proc readSurfacePixelFloat*(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr float32): bool {.importc: "SDL_ReadSurfacePixelFloat".}
+proc readPixelFloat*(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr float32): bool {.discardable.} =
+  readSurfacePixelFloat(surface, x, y, r, g, b, a)
+proc readPixelFloat*(surface: SurfacePtr, x, y: cint): (float32, float32, float32, float32) =
+  var r, g, b, a: float32
+  if readSurfacePixelFloat(surface, x, y, addr r, addr g, addr b, addr a):
+    return (r, g, b, a)
+  else:
+    echo getError()
+    return (0.0, 0.0, 0.0, 0.0)
+
+proc writeSurfacePixel*(surface: SurfacePtr, x, y: cint, r, g, b, a: uint8): bool {.importc: "SDL_WriteSurfacePixel".}
+proc writePixel*(surface: SurfacePtr, x, y: cint, r, g, b, a: uint8): bool {.discardable.} =
+  writeSurfacePixel(surface, x, y, r, g, b, a)
+
+proc writeSurfacePixelFloat*(surface: SurfacePtr, x, y: cint, r, g, b, a: float32): bool {.importc: "SDL_WriteSurfacePixelFloat".}
+proc writePixelFloat*(surface: SurfacePtr, x, y: cint, r, g, b, a: float32): bool {.discardable.} =
+  writeSurfacePixelFloat(surface, x, y, r, g, b, a)
 
 ## Section: SDL_video.h
 
@@ -1421,7 +1470,7 @@ type
     Metal = 29
     Transparent = 30
     NotFocusable = 31
-  WindowFlags*[E: WindowFlag] = distinct uint64
+  WindowFlags* = distinct uint64
 
   ## GL
   EGLDisplay* = distinct pointer
@@ -1492,12 +1541,116 @@ type
     ResizeBottom
     ResizeBottomLeft
     ResizeLeft
+  
+  DisplayModeData* = pointer
+  DisplayMode* {.bycopy.} = object
+    displayID*: DisplayID
+    format*: PixelFormat
+    w*, h*: cint
+    pixelDensity, refreshRate*: float32
+    refreshRateNumerator, refreshRateDenominator*: cint
 
-proc flags*[E: WindowFlag](e: varargs[E]): WindowFlags[E] {.inline.} =
+    internal: DisplayModeData
+  
+  WindowPtr* = pointer
+
+proc flags*(e: varargs[WindowFlag]): WindowFlags {.inline.} =
   var res: uint64 = 0
   for val in items(e):
-    res = res or uint64(val)
-  WindowFlag[E](res)
+    res = res or (1'u64 shl uint64(val))
+  WindowFlags(res)
+
+
+proc getNumVideoDrivers*(): cint {.importc: "SDL_GetNumVideoDrivers".}
+proc getVideoDriver*(index: cint): cstring {.importc: "SDL_GetVideoDriver".}
+proc getCurrentVideoDriver*(): cstring {.importc: "SDL_GetCurrentVideoDriver".}
+proc getSystemTheme*(): SystemTheme {.importc: "SDL_GetSystemTheme".}
+proc getDisplays*(count: ptr cint): ptr UncheckedArray[ptr DisplayID] {.importc: "SDL_GetDisplays".}
+proc getPrimaryDisplay*(): DisplayID {.importc: "SDL_GetPrimaryDisplay".}
+proc getDisplayProperties*(displayID: DisplayID): PropertiesID {.importc: "SDL_GetDisplayProperties".}
+proc getDisplayName*(displayID: DisplayID): cstring {.importc: "SDL_GetDisplayName".}
+proc getDisplayBounds*(displayID: DisplayID, rect: ptr Rect): bool {.importc: "SDL_GetDisplayBounds".}
+proc getDisplayUsableBounds*(displayID: DisplayID, rect: ptr Rect): bool {.importc: "SDL_GetDisplayUsableBounds".}
+
+
+proc createWindow*(title: cstring, w, h: cint, flags: WindowFlags): WindowPtr {.importc: "SDL_CreateWindow".}
+
+#[
+
+	GetNaturalDisplayOrientation    :: proc(displayID: DisplayID) -> DisplayOrientation ---
+	GetCurrentDisplayOrientation    :: proc(displayID: DisplayID) -> DisplayOrientation ---
+	GetDisplayContentScale          :: proc(displayID: DisplayID) -> f32 ---
+	GetFullscreenDisplayModes       :: proc(displayID: DisplayID, count: ^c.int) -> [^]^DisplayMode ---
+	GetClosestFullscreenDisplayMode :: proc(displayID: DisplayID, w, h: c.int, refresh_rate: f32, include_high_density_modes: bool, closest: ^DisplayMode) -> bool ---
+	GetDesktopDisplayMode           :: proc(displayID: DisplayID) -> ^DisplayMode ---
+	GetCurrentDisplayMode           :: proc(displayID: DisplayID) -> ^DisplayMode ---
+	GetDisplayForPoint              :: proc(#by_ptr point: Point) -> DisplayID ---
+	GetDisplayForRect               :: proc(#by_ptr rect: Rect) -> DisplayID ---
+	GetDisplayForWindow             :: proc(window: ^Window) -> DisplayID ---
+	GetWindowPixelDensity           :: proc(window: ^Window) -> f32 ---
+	GetWindowDisplayScale           :: proc(window: ^Window) -> f32 ---
+	SetWindowFullscreenMode         :: proc(window: ^Window, #by_ptr mode: DisplayMode) -> bool ---
+	GetWindowFullscreenMode         :: proc(window: ^Window) -> ^DisplayMode ---
+	GetWindowICCProfile             :: proc(window: ^Window, size: ^uint) -> rawptr ---
+	GetWindowPixelFormat            :: proc(window: ^Window) -> PixelFormat ---
+	GetWindows                      :: proc(count: ^c.int) -> [^]^Window ---
+	
+	CreatePopupWindow               :: proc(parent: ^Window, offset_x, offset_y: c.int, w, h: c.int, flags: WindowFlags) -> ^Window ---
+	CreateWindowWithProperties      :: proc(props: PropertiesID) -> ^Window ---
+	GetWindowID                     :: proc(window: ^Window) -> WindowID ---
+	GetWindowFromID                 :: proc(id: WindowID) -> ^Window ---
+	GetWindowParent                 :: proc(window: ^Window) -> ^Window ---
+	GetWindowProperties             :: proc(window: ^Window) -> PropertiesID ---
+	GetWindowFlags                  :: proc(window: ^Window) -> WindowFlags ---
+	SetWindowTitle                  :: proc(window: ^Window, title: cstring) -> bool ---
+	GetWindowTitle                  :: proc(window: ^Window) -> cstring ---
+	SetWindowIcon                   :: proc(window: ^Window, icon: ^Surface) -> bool ---
+	SetWindowPosition               :: proc(window: ^Window, x, y: c.int) -> bool ---
+	GetWindowPosition               :: proc(window: ^Window, x, y: ^c.int) -> bool ---
+	SetWindowSize                   :: proc(window: ^Window, w, h: c.int) -> bool ---
+	GetWindowSize                   :: proc(window: ^Window, w, h: ^c.int) -> bool ---
+	GetWindowSafeArea               :: proc(window: ^Window, rect: ^Rect) -> bool ---
+	SetWindowAspectRatio            :: proc(window: ^Window, min_aspect, max_aspect: f32) -> bool ---
+	GetWindowAspectRatio            :: proc(window: ^Window, min_aspect, max_aspect: ^f32) -> bool ---
+	GetWindowBordersSize            :: proc(window: ^Window, top, left, bottom, right: ^c.int) -> bool ---
+	GetWindowSizeInPixels           :: proc(window: ^Window, w, h: ^c.int) -> bool ---
+	SetWindowMinimumSize            :: proc(window: ^Window, min_w, min_h: c.int) -> bool ---
+	GetWindowMinimumSize            :: proc(window: ^Window, w, h: ^c.int) -> bool ---
+	SetWindowMaximumSize            :: proc(window: ^Window, max_w, max_h: c.int) -> bool ---
+	GetWindowMaximumSize            :: proc(window: ^Window, w, h: ^c.int) -> bool ---
+	SetWindowBordered               :: proc(window: ^Window, bordered: bool) -> bool ---
+	SetWindowResizable              :: proc(window: ^Window, resizable: bool) -> bool ---
+	SetWindowAlwaysOnTop            :: proc(window: ^Window, on_top: bool) -> bool ---
+	SetWindowFillDocument           :: proc(window: ^Window, fill: bool) -> bool ---
+	ShowWindow                      :: proc(window: ^Window) -> bool ---
+	HideWindow                      :: proc(window: ^Window) -> bool ---
+	RaiseWindow                     :: proc(window: ^Window) -> bool ---
+	MaximizeWindow                  :: proc(window: ^Window) -> bool ---
+	MinimizeWindow                  :: proc(window: ^Window) -> bool ---
+	RestoreWindow                   :: proc(window: ^Window) -> bool ---
+	SetWindowFullscreen             :: proc(window: ^Window, fullscreen: bool) -> bool ---
+	SyncWindow                      :: proc(window: ^Window) -> bool ---
+	WindowHasSurface                :: proc(window: ^Window) -> bool ---
+	GetWindowSurface                :: proc(window: ^Window) -> ^Surface ---
+	SetWindowSurfaceVSync           :: proc(window: ^Window, vsync: c.int) -> bool ---
+	GetWindowSurfaceVSync           :: proc(window: ^Window, vsync: ^c.int) -> bool ---
+	UpdateWindowSurface             :: proc(window: ^Window) -> bool ---
+	UpdateWindowSurfaceRects        :: proc(window: ^Window, rects: [^]Rect, numrects: c.int) -> bool ---
+	DestroyWindowSurface            :: proc(window: ^Window) -> bool ---
+	SetWindowKeyboardGrab           :: proc(window: ^Window, grabbed: bool) -> bool ---
+	SetWindowMouseGrab              :: proc(window: ^Window, grabbed: bool) -> bool ---
+	GetWindowKeyboardGrab           :: proc(window: ^Window) -> bool ---
+	GetWindowMouseGrab              :: proc(window: ^Window) -> bool ---
+	GetGrabbedWindow                :: proc() -> ^Window ---
+	SetWindowMouseRect              :: proc(window: ^Window, rect: ^Rect) -> bool ---
+	GetWindowMouseRect              :: proc(window: ^Window) -> ^Rect ---
+	SetWindowOpacity                :: proc(window: ^Window, opacity: f32) -> bool ---
+	GetWindowOpacity                :: proc(window: ^Window) -> f32 ---
+	SetWindowParent                 :: proc(window: ^Window, parent: ^Window) -> bool ---
+	SetWindowModal                  :: proc(window: ^Window, modal: bool) -> bool ---
+	SetWindowFocusable              :: proc(window: ^Window, focusable: bool) -> bool ---
+	ShowWindowSystemMenu            :: proc(window: ^Window, x, y: c.int) -> bool ---
+]#
 
 ## Section: SDL_gpu.h
 
@@ -1597,9 +1750,231 @@ proc flags*[E: WindowFlag](e: varargs[E]): WindowFlags[E] {.inline.} =
 
 ## Section: SDL_events.h
 
+type
+  EventType* {.size: sizeof(cint).} = enum
+    FirstUnused = 0,
+    ## App Events
+    Quit = 256,
+    ## Special App Events
+    Terminating,
+    LowMemory,
+
+    WillEnterBackground,
+    DidEnterBackground,
+
+    WillEnterForeground,
+    DidEnterForeground,
+
+    LocaleChanged, 
+    SystemThemeChanged,
+
+    ## Display Events
+    DisplayOrientationChanged = 337,
+    DisplayAdded,
+    DisplayRemoved,
+    DisplayMoved,
+    DisplayDesktopModeChanged,
+    DisplayCurrentModeChanged,
+    DisplayContentScaleChanged,
+    DisplayUsableBoundsChanged,
+    # DisplayFirst = 337
+    # DisplayLast = 344
+
+    ## Window Events
+    WindowShown = 514,
+    WindowHidden,
+    WindowExposed,
+    WindowMoved,
+    WindowResized,
+    PixelSizeChanged,
+    MetalViewResized,
+    Minimized,
+    Maximized,
+    Restored,
+    MouseEnter,
+    MouseLeave,
+    FocusGained,
+    FocusLost,
+    CloseRequested,
+    HitTest,
+    ICCProfileChanged,
+    DisplayChanged,
+    DisplayScaleChanged,
+    SafeAreaChanged,
+    Occluded,
+    EnterFullscreen,
+    LeaveFullscreen,
+    Destroyed
+    HDRStateChanged,
+    # WindowFirst = 514
+    # WindowLast = 538
+
+    ## Keyboard Events
+    KeyDown = 768,
+    KeyUp,
+    TextEditing,
+    TextInput,
+    KeymapChanged,
+    KeyboardAdded,
+    KeyboardRemoved,
+    TextEditingCandidates,
+    ScreenKeyboardShown,
+    ScreenKeyboardHidden,
+
+    ## Mouse Events
+    MouseMotion = 1024,
+    MouseButtonDown,
+    MouseButtonUp,
+    MouseWheel,
+    MouseAdded,
+    MouseRemoved
+
+    ## Joystick Events
+    JoystickAxisMotion = 1536,
+    JoystickBallMotion,
+    JoystickHatMotion,
+    JoystickButtonDown,
+    JoystickButtonUp,
+    JoystickAdded,
+    JoystickRemoved,
+    JoystickBatteryUpdated,
+    JoystickUpdateComplete,
+
+    ## Gamepad Events
+    GamepadAxisMotion = 1616,
+    GamepadButtonDown,
+    GamepadButtonUp,
+    GamepadAdded,
+    GamepadRemoved,
+    GamepadRemapped,
+    GamepadTouchpadDown,
+    GamepadTouchpadMotion,
+    GamepadTouchpadUp,
+    GamepadSensorUpdate,
+    GamepadUpdateComplete,
+    GamepadSteamHandleUpdated,
+
+    ## Touch Events
+    FingerDown = 1792,
+    FingerUp,
+    FingerMotion,
+    FingerCancelled,
+
+    ## Pinch Events
+    PinchBegin = 1808,
+    PinchUpdate,
+    PinchEnd,
+
+    ## Clipboard Events
+    ClipboardUpdate = 2304,
+
+    ## Drag and Drop Events
+    DropFile = 4096,
+    DropText,
+    DropBegin,
+    DropComplete,
+    DropPosition
+
+    ## Audio hotplug Events
+    AudioDeviceAdded = 4352,
+    AudioDeviceRemoved,
+    AudioDeviceFormatChanged,
+
+    ## Sensor Events
+    SensorUpdate = 4608,
+
+    ## Pressuresensitive pen Events
+    PenProximityIn = 4864,
+    PenProximityOut,
+    PenDown,
+    PenUp,
+    PenButtonDown,
+    PenButtonUp,
+    PenMotion,
+    PenAxis
+
+    ## Camera hotplug Events
+    CameraDeviceAdded = 5120,
+    CameraDeviceRemoved,
+    CameraDeviceApproved,
+    CameraDeviceDenied,
+
+    ## Render Events
+    RenderTargetsReset = 8192,
+    RenderDeviceReset,
+    RenderDeviceLost,
+
+    ## Reserved / Internal Events 
+    Private0 = 16384,
+    Private1,
+    Private2,
+    Private3,
+    PollSentinel = 32512,
+
+    ## User Events
+    User = 32768,
+    #...
+    Last = 65535
+  
+  CommonEvent* {.bycopy.} = object
+    pad: uint32
+    timestamp*: uint64
+  ## Grahh, this union will look terrible or just be weird
+  ## since we cant do case matching after we define more fields
+  ## unless I make a template or something,...
+
+  Event* {.bycopy.} = object
+    eventType*: EventType
+    padding: array[124, uint8]
+  EventPtr* = ptr Event
+  
+
+proc pollEvent*(event: EventPtr): bool {.importc: "SDL_PollEvent", discardable.}
+proc pollEvent*(event: var Event): bool {.inline, discardable.} =
+  pollEvent(addr event)
+
+#[
+
+	PumpEvents          :: proc() ---
+	PeepEvents          :: proc(events: [^]Event, numevents: c.int, action: EventAction, minType, maxType: EventType) -> int ---
+	HasEvent            :: proc(type: EventType) -> bool ---
+	HasEvents           :: proc(minType, maxType: EventType) -> bool ---
+	FlushEvent          :: proc(type: EventType) ---
+	FlushEvents         :: proc(minType, maxType: EventType) ---
+	WaitEvent           :: proc(event: ^Event) -> bool ---
+	WaitEventTimeout    :: proc(event: ^Event, timeoutMS: Sint32) -> bool ---
+	PushEvent           :: proc(event: ^Event) -> bool ---
+	SetEventFilter      :: proc(filter: EventFilter, userdata: rawptr) ---
+	GetEventFilter      :: proc(filter: ^EventFilter, userdata: ^rawptr) -> bool ---
+	AddEventWatch       :: proc(filter: EventFilter, userdata: rawptr) -> bool ---
+	RemoveEventWatch    :: proc(filter: EventFilter, userdata: rawptr) ---
+	FilterEvents        :: proc(filter: EventFilter, userdata: rawptr) ---
+	SetEventEnabled     :: proc(type: EventType, enabled: bool) ---
+	EventEnabled        :: proc(type: EventType) -> bool ---
+	RegisterEvents      :: proc(numevents: c.int) -> Uint32 ---
+	GetWindowFromEvent  :: proc(#by_ptr event: Event) -> ^Window ---
+	GetEventDescription :: proc(#by_ptr event: Event, buf: [^]u8, buflen: c.int) -> c.int ---
+
+]#
 
 ## Section: SDL_render.h
 
+type
+  TextureAccess* {.size: sizeof(cint).} = enum
+    Static,
+    Streaming,
+    Target
+  TextureAddressMode* {.size: sizeof(cint).} = enum
+    Invalid = -1,
+    Auto,
+    Clamp,
+    Wrap
+  RendererLogicalPresentation* {.size: sizeof(cint).} = enum
+    Disabled,
+    Stretch,
+    LetterBox,
+    Overscan,
+    IntegerScale
 
 ## Section: SDL_init.h
 
@@ -1613,7 +1988,7 @@ type
     Events = 14
     Sensor = 15
     Camera = 16
-  InitFlags*[E: InitFlag] = distinct uint32
+  InitFlags* = distinct uint32
 
   AppResult* {.size: sizeof(cint).} = enum
     Continue
@@ -1626,17 +2001,17 @@ type
   MainThreadCallback* = stub
 
 ## thanks Naylib!
-proc flags*[E: InitFlag](e: varargs[E]): InitFlags[E] {.inline.} =
+proc flags*(e: varargs[InitFlag]): InitFlags {.inline.} =
   var res: uint32 = 0
   for val in items(e):
-    res = res or uint32(val)
-  InitFlags[E](res)
+    res = res or (1'u32 shl uint32(val))
+  InitFlags(res)
 
-proc init*(flags: InitFlags[InitFlag]): bool {.importc: "SDL_Init".}
-proc initSubSystem*(flags: InitFlags[InitFlag]): bool {.importc: "SDL_InitSubSystem".}
-proc quitSubSystem*(flags: InitFlags[InitFlag]): void {.importc: "SDL_QuitSubSystem".}
+proc init*(flags: InitFlags): bool {.importc: "SDL_Init".}
+proc initSubSystem*(flags: InitFlags): bool {.importc: "SDL_InitSubSystem".}
+proc quitSubSystem*(flags: InitFlags): void {.importc: "SDL_QuitSubSystem".}
 proc quit*(): void {.importc: "SDL_Quit".}
-proc wasInit*(flags: InitFlags[InitFlag]): InitFlags[InitFlag] {.importc: "SDL_WasInit".}
+proc wasInit*(flags: InitFlags): InitFlags {.importc: "SDL_WasInit".}
 
 proc isMainThread*(): bool {.importc: "SDL_IsMainThread".}
 proc runOnMainThread*(callback: MainThreadCallback, userdata: pointer, waitComplete: bool): bool {.importc: "SDL_RunOnMainThread".}
