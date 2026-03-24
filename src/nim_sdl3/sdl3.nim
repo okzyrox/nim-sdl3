@@ -1045,7 +1045,7 @@ proc createDirectory*(dirPath: cstring): bool {.importc: "SDL_CreateDirectory".}
 proc enumerateDirectory*(dirPath: cstring, callback: EnumerateDirectoryCb, userdata: pointer): bool {.importc: "SDL_EnumerateDirectory".}
 proc removePath*(path: cstring): bool {.importc: "SDL_RemovePath".}
 proc renamePath*(oldPath, newPath: cstring): bool {.importc: "SDL_RenamePath".}
-proc copyFile*(srdPath, dstPath: cstring): bool {.importc: "SDL_CopyFile".}
+proc copyFile*(srcPath, dstPath: cstring): bool {.importc: "SDL_CopyFile".}
 proc getPathInfo*(path: cstring, info: ptr PathInfo): bool {.importc: "SDL_GetPathInfo".}
 proc getPathInfo*(path: cstring): PathInfo =
   var info: PathInfo
