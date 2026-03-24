@@ -2030,10 +2030,10 @@ const
   PROP_FILE_DIALOG_ACCEPT_STRING*   = "SDL.filedialog.accept"
   PROP_FILE_DIALOG_CANCEL_STRING*   = "SDL.filedialog.cancel"
 
-proc showOpenFileDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, filters: ptr UncheckedArray[DialogFileFilter], nfilters: cint, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowOpenFileDialog".}
-proc showSaveFileDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, filters: ptr UncheckedArray[DialogFileFilter], nfilters: cint, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowSaveFileDialog".}
-proc showOpenFolderDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowOpenFolderDialog".}
-proc showFileDialogWithProperties*(dialogType: FileDialogType, callback: DialogFileCallback, userdata: ptr, props: PropertiesID): bool {.importc: "SDL_ShowFileDialogWithProperties".}
+# proc showOpenFileDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, filters: ptr UncheckedArray[DialogFileFilter], nfilters: cint, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowOpenFileDialog".}
+# proc showSaveFileDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, filters: ptr UncheckedArray[DialogFileFilter], nfilters: cint, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowSaveFileDialog".}
+# proc showOpenFolderDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowOpenFolderDialog".}
+# proc showFileDialogWithProperties*(dialogType: FileDialogType, callback: DialogFileCallback, userdata: ptr, props: PropertiesID): bool {.importc: "SDL_ShowFileDialogWithProperties".}
 
 
 ## Section: SDL_camera.h
