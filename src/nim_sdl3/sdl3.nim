@@ -1567,90 +1567,354 @@ proc getCurrentVideoDriver*(): cstring {.importc: "SDL_GetCurrentVideoDriver".}
 proc getSystemTheme*(): SystemTheme {.importc: "SDL_GetSystemTheme".}
 proc getDisplays*(count: ptr cint): ptr UncheckedArray[ptr DisplayID] {.importc: "SDL_GetDisplays".}
 proc getPrimaryDisplay*(): DisplayID {.importc: "SDL_GetPrimaryDisplay".}
+
 proc getDisplayProperties*(displayID: DisplayID): PropertiesID {.importc: "SDL_GetDisplayProperties".}
 proc getDisplayName*(displayID: DisplayID): cstring {.importc: "SDL_GetDisplayName".}
 proc getDisplayBounds*(displayID: DisplayID, rect: ptr Rect): bool {.importc: "SDL_GetDisplayBounds".}
 proc getDisplayUsableBounds*(displayID: DisplayID, rect: ptr Rect): bool {.importc: "SDL_GetDisplayUsableBounds".}
+proc getNaturalDisplayOrientation*(displayID: DisplayID): DisplayOrientation {.importc: "SDL_GetNaturalDisplayOrientation".}
+proc getCurrentDisplayOrientation*(displayID: DisplayID): DisplayOrientation {.importc: "SDL_GetCurrentDisplayOrientation".}
+proc getDisplayContentScale*(displayID: DisplayID): float32 {.importc: "SDL_GetDisplayContentScale".}
 
+proc getFullscreenDisplayModes*(displayID: DisplayID, count: ptr cint): ptr UncheckedArray[ptr DisplayMode] {.importc: "SDL_GetFullscreenDisplayModes".}
+proc getFullscreenDisplayModes*(displayID: DisplayID): seq[ptr DisplayMode] =
+  var count: cint
+  var modes = getFullscreenDisplayModes(displayID, addr count)
+  result = newSeqOfCap[ptr DisplayMode](count)
+  for i in 0 ..< count:
+    result.add(modes[i])
+
+proc getClosestFullscreenDisplayMode*(displayID: DisplayID, width, height: cint, refreshRate: float32, includeHighDensityModes: bool, closest: ptr DisplayMode): bool {.importc: "SDL_GetClosestFullscreenDisplayMode".}
+proc getDesktopDisplayMode*(displayID: DisplayID): ptr DisplayMode {.importc: "SDL_GetDesktopDisplayMode".}
+proc getCurrentDisplayMode*(displayID: DisplayID): ptr DisplayMode {.importc: "SDL_GetCurrentDisplayMode".}
+
+proc getDisplayForPoint*(point: ptr Point): DisplayID {.importc: "SDL_GetDisplayForPoint".}
+proc getDisplayForRect*(rect: ptr Rect): DisplayID {.importc: "SDL_GetDisplayForRect".}
+proc getDisplayForWindow*(window: WindowPtr): DisplayID {.importc: "SDL_GetDisplayForWindow".}
+
+proc getWindowPixelDensity*(window: WindowPtr): float32 {.importc: "SDL_GetWindowPixelDensity".}
+proc getWindowDisplayScale*(window: WindowPtr): float32 {.importc: "SDL_GetWindowDisplayScale".}
+
+proc setWindowFullscreenMode*(window: WindowPtr, mode: ptr DisplayMode): bool {.importc: "SDL_SetWindowFullscreenMode".}
+proc setFullscreenMode*(window: WindowPtr, mode: ptr DisplayMode): bool {.discardable.} =
+  setWindowFullscreenMode(window, mode)
+proc `fullscreenMode=`*(window: WindowPtr, mode: ptr DisplayMode): bool {.discardable.} =
+  setWindowFullscreenMode(window, mode)
+
+proc getWindowFullscreenMode*(window: WindowPtr): ptr DisplayMode {.importc: "SDL_GetWindowFullscreenMode".}
+
+proc getWindowICCProfile*(window: WindowPtr, size: ptr uint): ptr {.importc: "SDL_GetWindowICCProfile".}
+proc getWindowPixelFormat*(window: WindowPtr): PixelFormat {.importc: "SDL_GetWindowPixelFormat".}
+proc getWindows*(count: ptr cint): ptr UncheckedArray[WindowPtr] {.importc: "SDL_GetWindows".}
+proc getWindows*(): seq[WindowPtr] =
+  var count: cint
+  var windows = getWindows(addr count)
+  result = newSeqOfCap[WindowPtr](count)
+  for i in 0 ..< count:
+    result.add(windows[i])
 
 proc createWindow*(title: cstring, w, h: cint, flags: WindowFlags): WindowPtr {.importc: "SDL_CreateWindow".}
+proc createPopupWindow*(parent: WindowPtr, offsetX, offsetY: cint, width, height: cint, flags: WindowFlags): WindowPtr {.importc: "SDL_CreatePopupWindow".}
+proc createWindowWithProperties*(props: PropertiesID): WindowPtr {.importc: "SDL_CreateWindowWithProperties".}
 
-#[
+proc getWindowID*(window: WindowPtr): WindowID {.importc: "SDL_GetWindowID".}
+proc getWindowFromID*(id: WindowID): WindowPtr {.importc: "SDL_GetWindowFromID".}
 
-	GetNaturalDisplayOrientation    :: proc(displayID: DisplayID) -> DisplayOrientation ---
-	GetCurrentDisplayOrientation    :: proc(displayID: DisplayID) -> DisplayOrientation ---
-	GetDisplayContentScale          :: proc(displayID: DisplayID) -> f32 ---
-	GetFullscreenDisplayModes       :: proc(displayID: DisplayID, count: ^c.int) -> [^]^DisplayMode ---
-	GetClosestFullscreenDisplayMode :: proc(displayID: DisplayID, w, h: c.int, refresh_rate: f32, include_high_density_modes: bool, closest: ^DisplayMode) -> bool ---
-	GetDesktopDisplayMode           :: proc(displayID: DisplayID) -> ^DisplayMode ---
-	GetCurrentDisplayMode           :: proc(displayID: DisplayID) -> ^DisplayMode ---
-	GetDisplayForPoint              :: proc(#by_ptr point: Point) -> DisplayID ---
-	GetDisplayForRect               :: proc(#by_ptr rect: Rect) -> DisplayID ---
-	GetDisplayForWindow             :: proc(window: ^Window) -> DisplayID ---
-	GetWindowPixelDensity           :: proc(window: ^Window) -> f32 ---
-	GetWindowDisplayScale           :: proc(window: ^Window) -> f32 ---
-	SetWindowFullscreenMode         :: proc(window: ^Window, #by_ptr mode: DisplayMode) -> bool ---
-	GetWindowFullscreenMode         :: proc(window: ^Window) -> ^DisplayMode ---
-	GetWindowICCProfile             :: proc(window: ^Window, size: ^uint) -> rawptr ---
-	GetWindowPixelFormat            :: proc(window: ^Window) -> PixelFormat ---
-	GetWindows                      :: proc(count: ^c.int) -> [^]^Window ---
-	
-	CreatePopupWindow               :: proc(parent: ^Window, offset_x, offset_y: c.int, w, h: c.int, flags: WindowFlags) -> ^Window ---
-	CreateWindowWithProperties      :: proc(props: PropertiesID) -> ^Window ---
-	GetWindowID                     :: proc(window: ^Window) -> WindowID ---
-	GetWindowFromID                 :: proc(id: WindowID) -> ^Window ---
-	GetWindowParent                 :: proc(window: ^Window) -> ^Window ---
-	GetWindowProperties             :: proc(window: ^Window) -> PropertiesID ---
-	GetWindowFlags                  :: proc(window: ^Window) -> WindowFlags ---
-	SetWindowTitle                  :: proc(window: ^Window, title: cstring) -> bool ---
-	GetWindowTitle                  :: proc(window: ^Window) -> cstring ---
-	SetWindowIcon                   :: proc(window: ^Window, icon: ^Surface) -> bool ---
-	SetWindowPosition               :: proc(window: ^Window, x, y: c.int) -> bool ---
-	GetWindowPosition               :: proc(window: ^Window, x, y: ^c.int) -> bool ---
-	SetWindowSize                   :: proc(window: ^Window, w, h: c.int) -> bool ---
-	GetWindowSize                   :: proc(window: ^Window, w, h: ^c.int) -> bool ---
-	GetWindowSafeArea               :: proc(window: ^Window, rect: ^Rect) -> bool ---
-	SetWindowAspectRatio            :: proc(window: ^Window, min_aspect, max_aspect: f32) -> bool ---
-	GetWindowAspectRatio            :: proc(window: ^Window, min_aspect, max_aspect: ^f32) -> bool ---
-	GetWindowBordersSize            :: proc(window: ^Window, top, left, bottom, right: ^c.int) -> bool ---
-	GetWindowSizeInPixels           :: proc(window: ^Window, w, h: ^c.int) -> bool ---
-	SetWindowMinimumSize            :: proc(window: ^Window, min_w, min_h: c.int) -> bool ---
-	GetWindowMinimumSize            :: proc(window: ^Window, w, h: ^c.int) -> bool ---
-	SetWindowMaximumSize            :: proc(window: ^Window, max_w, max_h: c.int) -> bool ---
-	GetWindowMaximumSize            :: proc(window: ^Window, w, h: ^c.int) -> bool ---
-	SetWindowBordered               :: proc(window: ^Window, bordered: bool) -> bool ---
-	SetWindowResizable              :: proc(window: ^Window, resizable: bool) -> bool ---
-	SetWindowAlwaysOnTop            :: proc(window: ^Window, on_top: bool) -> bool ---
-	SetWindowFillDocument           :: proc(window: ^Window, fill: bool) -> bool ---
-	ShowWindow                      :: proc(window: ^Window) -> bool ---
-	HideWindow                      :: proc(window: ^Window) -> bool ---
-	RaiseWindow                     :: proc(window: ^Window) -> bool ---
-	MaximizeWindow                  :: proc(window: ^Window) -> bool ---
-	MinimizeWindow                  :: proc(window: ^Window) -> bool ---
-	RestoreWindow                   :: proc(window: ^Window) -> bool ---
-	SetWindowFullscreen             :: proc(window: ^Window, fullscreen: bool) -> bool ---
-	SyncWindow                      :: proc(window: ^Window) -> bool ---
-	WindowHasSurface                :: proc(window: ^Window) -> bool ---
-	GetWindowSurface                :: proc(window: ^Window) -> ^Surface ---
-	SetWindowSurfaceVSync           :: proc(window: ^Window, vsync: c.int) -> bool ---
-	GetWindowSurfaceVSync           :: proc(window: ^Window, vsync: ^c.int) -> bool ---
-	UpdateWindowSurface             :: proc(window: ^Window) -> bool ---
-	UpdateWindowSurfaceRects        :: proc(window: ^Window, rects: [^]Rect, numrects: c.int) -> bool ---
-	DestroyWindowSurface            :: proc(window: ^Window) -> bool ---
-	SetWindowKeyboardGrab           :: proc(window: ^Window, grabbed: bool) -> bool ---
-	SetWindowMouseGrab              :: proc(window: ^Window, grabbed: bool) -> bool ---
-	GetWindowKeyboardGrab           :: proc(window: ^Window) -> bool ---
-	GetWindowMouseGrab              :: proc(window: ^Window) -> bool ---
-	GetGrabbedWindow                :: proc() -> ^Window ---
-	SetWindowMouseRect              :: proc(window: ^Window, rect: ^Rect) -> bool ---
-	GetWindowMouseRect              :: proc(window: ^Window) -> ^Rect ---
-	SetWindowOpacity                :: proc(window: ^Window, opacity: f32) -> bool ---
-	GetWindowOpacity                :: proc(window: ^Window) -> f32 ---
-	SetWindowParent                 :: proc(window: ^Window, parent: ^Window) -> bool ---
-	SetWindowModal                  :: proc(window: ^Window, modal: bool) -> bool ---
-	SetWindowFocusable              :: proc(window: ^Window, focusable: bool) -> bool ---
-	ShowWindowSystemMenu            :: proc(window: ^Window, x, y: c.int) -> bool ---
-]#
+proc getWindowParent*(window: WindowPtr): WindowPtr {.importc: "SDL_GetWindowParent".}
+proc getWindowProperties*(window: WindowPtr): PropertiesID {.importc: "SDL_GetWindowProperties".}
+proc getWindowFlags*(window: WindowPtr): WindowFlags {.importc: "SDL_GetWindowFlags".}
+
+proc setWindowTitle*(window: WindowPtr, title: cstring): bool {.importc: "SDL_SetWindowTitle".}
+proc setTitle*(window: WindowPtr, title: cstring): bool {.discardable.} =
+  setWindowTitle(window, title)
+proc `title=`*(window: WindowPtr, title: cstring): bool {.discardable.} =
+  setWindowTitle(window, title)
+
+proc getWindowTitle*(window: WindowPtr): cstring {.importc: "SDL_GetWindowTitle".}
+proc getTitle*(window: WindowPtr): cstring {.discardable.} =
+  getWindowTitle(window)
+proc `title`*(window: WindowPtr): cstring {.discardable.} =
+  getWindowTitle(window)
+
+proc setWindowIcon*(window: WindowPtr, icon: SurfacePtr): bool {.importc: "SDL_SetWindowIcon".}
+proc setIcon*(window: WindowPtr, icon: SurfacePtr): bool {.discardable.} =
+  setWindowIcon(window, icon)
+proc `icon=`*(window: WindowPtr, icon: SurfacePtr): bool {.discardable.} =
+  setWindowIcon(window, icon)
+
+proc setWindowPosition*(window: WindowPtr, x, y: cint): bool {.importc: "SDL_SetWindowPosition".}
+proc setPosition*(window: WindowPtr, x, y: cint): bool {.discardable.} =
+  setWindowPosition(window, x, y)
+
+proc getWindowPosition*(window: WindowPtr, x, y: ptr cint): bool {.importc: "SDL_GetWindowPosition".}
+proc getPosition*(window: WindowPtr, x, y: ptr cint): bool {.discardable.} =
+  getWindowPosition(window, x, y)
+proc getPosition*(window: WindowPtr): (cint, cint) =
+  var x, y: cint
+  if getWindowPosition(window, addr x, addr y):
+    return (x, y)
+  else:
+    echo getError()
+    return (0, 0)
+proc `position`*(window: WindowPtr): (cint, cint) =
+  getPosition(window)
+
+proc setWindowSize*(window: WindowPtr, w, h: cint): bool {.importc: "SDL_SetWindowSize".}
+proc setSize*(window: WindowPtr, w, h: cint): bool {.discardable.} =
+  setWindowSize(window, w, h)
+
+proc getWindowSize*(window: WindowPtr, w, h: ptr cint): bool {.importc: "SDL_GetWindowSize".}
+proc getSize*(window: WindowPtr, w, h: ptr cint): bool {.discardable.} =
+  getWindowSize(window, w, h)
+proc getSize*(window: WindowPtr): (cint, cint) =
+  var w, h: cint
+  if getWindowSize(window, addr w, addr h):
+    return (w, h)
+  else:
+    echo getError()
+    return (0, 0)
+proc `size`*(window: WindowPtr): (cint, cint) =
+  getSize(window)
+
+proc getWindowSafeArea*(window: WindowPtr, rect: ptr Rect): bool {.importc: "SDL_GetWindowSafeArea".}
+proc getSafeArea*(window: WindowPtr, rect: ptr Rect): bool {.discardable.} =
+  getWindowSafeArea(window, rect)
+proc getSafeArea*(window: WindowPtr): Rect =
+  var rect: Rect
+  if getWindowSafeArea(window, addr rect):
+    return rect
+  else:
+    echo getError()
+    return Rect(x: 0, y: 0, w: 0, h: 0)
+
+proc setWindowAspectRatio*(window: WindowPtr, minAspect, maxAspect: float32): bool {.importc: "SDL_SetWindowAspectRatio".}
+
+proc getWindowAspectRatio*(window: WindowPtr, minAspect, maxAspect: ptr float32): bool {.importc: "SDL_GetWindowAspectRatio".}
+proc getAspectRatio*(window: WindowPtr, minAspect, maxAspect: ptr float32): bool {.discardable.} =
+  getWindowAspectRatio(window, minAspect, maxAspect)
+proc getAspectRatio*(window: WindowPtr): (float32, float32) =
+  var minAspect, maxAspect: float32
+  if getWindowAspectRatio(window, addr minAspect, addr maxAspect):
+    return (minAspect, maxAspect)
+  else:
+    echo getError()
+    return (0.0, 0.0)
+
+proc getWindowBordersSize*(window: WindowPtr, top, left, bottom, right: ptr cint): bool {.importc: "SDL_GetWindowBordersSize".}
+proc getBordersSize*(window: WindowPtr, top, left, bottom, right: ptr cint): bool {.discardable.} =
+  getWindowBordersSize(window, top, left, bottom, right)
+proc getBordersSize*(window: WindowPtr): (cint, cint, cint, cint) =
+  var top, left, bottom, right: cint
+  if getWindowBordersSize(window, addr top, addr left, addr bottom, addr right):
+    return (top, left, bottom, right)
+  else:
+    echo getError()
+    return (0, 0, 0, 0)
+
+proc getWindowSizeInPixels*(window: WindowPtr, width, height: ptr cint): bool {.importc: "SDL_GetWindowSizeInPixels".}
+proc getSizeInPixels*(window: WindowPtr, width, height: ptr cint): bool {.discardable.} =
+  getWindowSizeInPixels(window, width, height)
+proc getSizeInPixels*(window: WindowPtr): (cint, cint) =
+  var width, height: cint
+  if getWindowSizeInPixels(window, addr width, addr height):
+    return (width, height)
+  else:
+    echo getError()
+    return (0, 0)
+
+proc setWindowMinimumSize*(window: WindowPtr, minW, minH: cint): bool {.importc: "SDL_SetWindowMinimumSize".}
+proc setMinimumSize*(window: WindowPtr, minW, minH: cint): bool {.discardable.} =
+  setWindowMinimumSize(window, minW, minH)
+
+proc getWindowMinimumSize*(window: WindowPtr, minW, minH: ptr cint): bool {.importc: "SDL_GetWindowMinimumSize".}
+proc getMinimumSize*(window: WindowPtr, minW, minH: ptr cint): bool {.discardable.} =
+  getWindowMinimumSize(window, minW, minH)
+proc getMinimumSize*(window: WindowPtr): (cint, cint) =
+  var minW, minH: cint
+  if getWindowMinimumSize(window, addr minW, addr minH):
+    return (minW, minH)
+  else:
+    echo getError()
+    return (0, 0)
+
+proc getWindowMaximumSize*(window: WindowPtr, maxW, maxH: ptr cint): bool {.importc: "SDL_GetWindowMaximumSize".}
+proc getMaximumSize*(window: WindowPtr, maxW, maxH: ptr cint): bool {.discardable.} =
+  getWindowMaximumSize(window, maxW, maxH)
+proc getMaximumSize*(window: WindowPtr): (cint, cint) =
+  var maxW, maxH: cint
+  if getWindowMaximumSize(window, addr maxW, addr maxH):
+    return (maxW, maxH)
+  else:
+    echo getError()
+    return (0, 0)
+
+proc setWindowMaximumSize*(window: WindowPtr, maxW, maxH: cint): bool {.importc: "SDL_SetWindowMaximumSize".}
+proc setMaximumSize*(window: WindowPtr, maxW, maxH: cint): bool {.discardable.} =
+  setWindowMaximumSize(window, maxW, maxH)
+
+proc setWindowBordered*(window: WindowPtr, bordered: bool): bool {.importc: "SDL_SetWindowBordered".}
+proc setBordered*(window: WindowPtr, bordered: bool): bool {.discardable.} =
+  setWindowBordered(window, bordered)
+proc `bordered=`*(window: WindowPtr, bordered: bool): bool {.discardable.} =
+  setWindowBordered(window, bordered)
+
+proc setWindowResizable*(window: WindowPtr, resizable: bool): bool {.importc: "SDL_SetWindowResizable".}
+proc setResizable*(window: WindowPtr, resizable: bool): bool {.discardable.} =
+  setWindowResizable(window, resizable)
+proc `resizable=`*(window: WindowPtr, resizable: bool): bool {.discardable.} =
+  setWindowResizable(window, resizable)
+
+proc setWindowAlwaysOnTop*(window: WindowPtr, onTop: bool): bool {.importc: "SDL_SetWindowAlwaysOnTop".}
+proc setAlwaysOnTop*(window: WindowPtr, onTop: bool): bool {.discardable.} =
+  setWindowAlwaysOnTop(window, onTop)
+proc `alwaysOnTop=`*(window: WindowPtr, onTop: bool): bool {.discardable.} =
+  setWindowAlwaysOnTop(window, onTop)
+
+proc setWindowFillDocument*(window: WindowPtr, fill: bool): bool {.importc: "SDL_SetWindowFillDocument".}
+proc setFillDocument*(window: WindowPtr, fill: bool): bool {.discardable.} =
+  setWindowFillDocument(window, fill)
+proc `fillDocument=`*(window: WindowPtr, fill: bool): bool {.discardable.} =
+  setWindowFillDocument(window, fill)
+
+proc showWindow*(window: WindowPtr): bool {.importc: "SDL_ShowWindow".}
+proc show*(window: WindowPtr): bool {.discardable.} =
+  showWindow(window)
+proc hideWindow*(window: WindowPtr): bool {.importc: "SDL_HideWindow".}
+proc hide*(window: WindowPtr): bool {.discardable.} =
+  hideWindow(window)
+proc raiseWindow*(window: WindowPtr): bool {.importc: "SDL_RaiseWindow".}
+proc maximizeWindow*(window: WindowPtr): bool {.importc: "SDL_MaximizeWindow".}
+proc maximize*(window: WindowPtr): bool {.discardable.} =
+  maximizeWindow(window)
+proc minimizeWindow*(window: WindowPtr): bool {.importc: "SDL_MinimizeWindow".}
+proc minimize*(window: WindowPtr): bool {.discardable.} =
+  minimizeWindow(window)
+proc restoreWindow*(window: WindowPtr): bool {.importc: "SDL_RestoreWindow".}
+proc restore*(window: WindowPtr): bool {.discardable.} =
+  restoreWindow(window)
+proc setWindowFullscreen*(window: WindowPtr, fullscreen: bool): bool {.importc: "SDL_SetWindowFullscreen".}
+proc setFullscreen*(window: WindowPtr, fullscreen: bool): bool {.discardable.} =
+  setWindowFullscreen(window, fullscreen)
+proc `fullscreen=`*(window: WindowPtr, fullscreen: bool): bool {.discardable.} =
+  setWindowFullscreen(window, fullscreen)
+
+proc syncWindow*(window: WindowPtr): bool {.importc: "SDL_SyncWindow".}
+proc sync*(window: WindowPtr): bool {.discardable.} =
+  syncWindow(window)
+
+proc windowHasSurface*(window: WindowPtr): bool {.importc: "SDL_WindowHasSurface".}
+proc hasSurface*(window: WindowPtr): bool {.discardable.} =
+  windowHasSurface(window)
+proc getWindowSurface*(window: WindowPtr): SurfacePtr {.importc: "SDL_GetWindowSurface".}
+proc getSurface*(window: WindowPtr): SurfacePtr {.discardable.} =
+  getWindowSurface(window)
+proc `surface`*(window: WindowPtr): SurfacePtr {.discardable.} =
+  getWindowSurface(window)
+
+proc setWindowSurfaceVSync*(window: WindowPtr, vsync: cint): bool {.importc: "SDL_SetWindowSurfaceVSync".}
+proc setSurfaceVSync*(window: WindowPtr, vsync: cint): bool {.discardable.} =
+  setWindowSurfaceVSync(window, vsync)
+proc getWindowSurfaceVSync*(window: WindowPtr, vsync: ptr cint): bool {.importc: "SDL_GetWindowSurfaceVSync".}
+proc getSurfaceVSync*(window: WindowPtr, vsync: ptr cint): bool {.discardable.} =
+  getWindowSurfaceVSync(window, vsync)
+proc getSurfaceVSync*(window: WindowPtr): cint =
+  var vsync: cint
+  if getWindowSurfaceVSync(window, addr vsync):
+    return vsync
+  else:
+    echo getError()
+    return 0
+
+proc updateWindowSurface*(window: WindowPtr): bool {.importc: "SDL_UpdateWindowSurface".}
+proc updateSurface*(window: WindowPtr): bool {.discardable.} =
+  updateWindowSurface(window)
+proc updateWindowSurfaceRects*(window: WindowPtr, rects: ptr UncheckedArray[Rect], numRects: cint): bool {.importc: "SDL_UpdateWindowSurfaceRects".}
+proc updateSurfaceRects*(window: WindowPtr, rects: ptr UncheckedArray[Rect], numRects: cint): bool {.discardable.} =
+  updateWindowSurfaceRects(window, rects, numRects)
+proc updateSurfaceRects*(window: WindowPtr, rects: seq[Rect]): bool {.discardable.} =
+  result = false
+  var rectsArray: ptr UncheckedArray[Rect] = nil
+  if rects.len > 0:
+    ## aaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    rectsArray = cast[ptr UncheckedArray[Rect]](realloc(rectsArray, Rect.sizeof * rects.len))
+    for i in 0 ..< rects.len:
+      rectsArray[i] = rects[i]
+    result = updateWindowSurfaceRects(window, rectsArray, rects.len.cint)
+    defer:
+      rectsArray = cast[ptr UncheckedArray[Rect]](realloc(rectsArray, 0))
+
+proc destroyWindowSurface*(window: WindowPtr): bool {.importc: "SDL_DestroyWindowSurface".}
+proc destroySurface*(window: WindowPtr): bool {.discardable.} =
+  destroyWindowSurface(window)
+
+proc setWindowKeyboardGrab*(window: WindowPtr, grabbed: bool): bool {.importc: "SDL_SetWindowKeyboardGrab".}
+proc setKeyboardGrab*(window: WindowPtr, grabbed: bool): bool {.discardable.} =
+  setWindowKeyboardGrab(window, grabbed)
+proc `keyboardGrab=`*(window: WindowPtr, grabbed: bool): bool {.discardable.} =
+  setWindowKeyboardGrab(window, grabbed)
+
+proc getWindowKeyboardGrab*(window: WindowPtr): bool {.importc: "SDL_GetWindowKeyboardGrab".}
+proc getKeyboardGrab*(window: WindowPtr): bool {.discardable.} =
+  getWindowKeyboardGrab(window)
+proc `keyboardGrab`*(window: WindowPtr): bool {.discardable.} =
+  getWindowKeyboardGrab(window)
+
+proc setWindowMouseGrab*(window: WindowPtr, grabbed: bool): bool {.importc: "SDL_SetWindowMouseGrab".}
+proc setMouseGrab*(window: WindowPtr, grabbed: bool): bool {.discardable.} =
+  setWindowMouseGrab(window, grabbed)
+proc `mouseGrab=`*(window: WindowPtr, grabbed: bool): bool {.discardable.} =
+  setWindowMouseGrab(window, grabbed)
+
+proc getWindowMouseGrab*(window: WindowPtr): bool {.importc: "SDL_GetWindowMouseGrab".}
+proc getMouseGrab*(window: WindowPtr): bool {.discardable.} =
+  getWindowMouseGrab(window)
+proc `mouseGrab`*(window: WindowPtr): bool {.discardable.} =
+  getWindowMouseGrab(window)
+
+proc getGrabbedWindow*(): WindowPtr {.importc: "SDL_GetGrabbedWindow".}
+
+proc setWindowMouseRect*(window: WindowPtr, rect: ptr Rect): bool {.importc: "SDL_SetWindowMouseRect".}
+proc setMouseRect*(window: WindowPtr, rect: ptr Rect): bool {.discardable.} =
+  setWindowMouseRect(window, rect)
+proc setMouseRect*(window: WindowPtr, rect: Rect): bool {.discardable.} =
+  setWindowMouseRect(window, addr rect)
+proc getWindowMouseRect*(window: WindowPtr): ptr Rect {.importc: "SDL_GetWindowMouseRect".}
+proc getMouseRect*(window: WindowPtr): ptr Rect {.discardable.} =
+  getWindowMouseRect(window)
+
+proc setWindowOpacity*(window: WindowPtr, opacity: float32): bool {.importc: "SDL_SetWindowOpacity".}
+proc setOpacity*(window: WindowPtr, opacity: float32): bool {.discardable.} =
+  setWindowOpacity(window, opacity)
+proc `opacity=`*(window: WindowPtr, opacity: float32): bool {.discardable.} =
+  setWindowOpacity(window, opacity)
+
+proc getWindowOpacity*(window: WindowPtr): float32 {.importc: "SDL_GetWindowOpacity".}
+proc getOpacity*(window: WindowPtr): float32 {.discardable.} =
+  getWindowOpacity(window)
+proc `opacity`*(window: WindowPtr): float32 {.discardable.} =
+  getWindowOpacity(window)
+
+proc setWindowParent*(window: WindowPtr, parent: WindowPtr): bool {.importc: "SDL_SetWindowParent".}
+proc setParent*(window: WindowPtr, parent: WindowPtr): bool {.discardable.} =
+  setWindowParent(window, parent)
+proc `parent=`*(window: WindowPtr, parent: WindowPtr): bool {.discardable.} =
+  setWindowParent(window, parent)
+
+proc setWindowModal*(window: WindowPtr, modal: bool): bool {.importc: "SDL_SetWindowModal".}
+proc setModal*(window: WindowPtr, modal: bool): bool {.discardable.} =
+  setWindowModal(window, modal)
+proc `modal=`*(window: WindowPtr, modal: bool): bool {.discardable.} =
+  setWindowModal(window, modal)
+
+proc setWindowFocusable*(window: WindowPtr, focusable: bool): bool {.importc: "SDL_SetWindowFocusable".}
+proc setFocusable*(window: WindowPtr, focusable: bool): bool {.discardable.} =
+  setWindowFocusable(window, focusable)
+proc `focusable=`*(window: WindowPtr, focusable: bool): bool {.discardable.} =
+  setWindowFocusable(window, focusable)
+
+proc showWindowSystemMenu*(window: WindowPtr, x, y: cint): bool {.importc: "SDL_ShowWindowSystemMenu".}
+proc showSystemMenu*(window: WindowPtr, x, y: cint): bool {.discardable.} =
+  showWindowSystemMenu(window, x, y)
 
 ## Section: SDL_gpu.h
 
@@ -1744,9 +2008,102 @@ proc createWindow*(title: cstring, w, h: cint, flags: WindowFlags): WindowPtr {.
 
 ## Section: SDL_dialog.h
 
+type
+  FileDialogType* {.size: sizeof(cint).} = enum
+    OpenFile
+    SaveFile
+    OpenFolder
+  
+  DialogFileCallback* = proc(userdata: ptr, filelist: UncheckedArray[cstring], filter: cint) {.cdecl.}
+
+  DialogFileFilter* {.bycopy.} = object
+    name*: cstring
+    pattern*: cstring
+
+const
+  PROP_FILE_DIALOG_FILTERS_POINTER* = "SDL.filedialog.filters"
+  PROP_FILE_DIALOG_NFILTERS_NUMBER* = "SDL.filedialog.nfilters"
+  PROP_FILE_DIALOG_WINDOW_POINTER*  = "SDL.filedialog.window"
+  PROP_FILE_DIALOG_LOCATION_STRING* = "SDL.filedialog.location"
+  PROP_FILE_DIALOG_MANY_BOOLEAN*    = "SDL.filedialog.many"
+  PROP_FILE_DIALOG_TITLE_STRING*    = "SDL.filedialog.title"
+  PROP_FILE_DIALOG_ACCEPT_STRING*   = "SDL.filedialog.accept"
+  PROP_FILE_DIALOG_CANCEL_STRING*   = "SDL.filedialog.cancel"
+
+proc showOpenFileDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, filters: ptr UncheckedArray[DialogFileFilter], nfilters: cint, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowOpenFileDialog".}
+proc showSaveFileDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, filters: ptr UncheckedArray[DialogFileFilter], nfilters: cint, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowSaveFileDialog".}
+proc showOpenFolderDialog*(callback: DialogFileCallback, userdata: ptr, window: WindowPtr, defaultLocation: cstring, allowMany: bool): bool {.importc: "SDL_ShowOpenFolderDialog".}
+proc showFileDialogWithProperties*(dialogType: FileDialogType, callback: DialogFileCallback, userdata: ptr, props: PropertiesID): bool {.importc: "SDL_ShowFileDialogWithProperties".}
+
 
 ## Section: SDL_camera.h
 
+type
+  CameraID* = distinct uint32
+
+  CameraPosition* {.size: sizeof(cint).} = enum
+    Unknown,
+    FrontFacing,
+    BackFacing
+
+  CameraPtr* = ptr object
+  CameraSpec* {.bycopy.} = object
+    format: PixelFormat
+    colorspace: Colorspace
+    width, height: cint
+    framerateNumerator, framerateDenominator: cint
+  CameraSpecPtr* = ptr CameraSpec
+
+proc getNumCameraDrivers*(): cint {.importc: "SDL_GetNumCameraDrivers".}
+proc getCameraDriver*(index: cint): cstring {.importc: "SDL_GetCameraDriver".}
+proc getCurrentCameraDriver*(): cstring {.importc: "SDL_GetCurrentCameraDriver".}
+
+proc getCameras*(count: ptr cint): ptr UncheckedArray[CameraID] {.importc: "SDL_GetCameras".}
+proc getCameras*(): seq[CameraID] =
+  var count: cint
+  var cameras = getCameras(addr count)
+  result = newSeqOfCap[CameraID](count)
+  for i in 0 ..< count:
+    result.add(cameras[i])
+
+proc getCameraSupportedFormats*(instanceID: CameraID, count: ptr cint): ptr UncheckedArray[CameraSpecPtr] {.importc: "SDL_GetCameraSupportedFormats".}
+proc getCameraSupportedFormats*(instanceID: CameraID): seq[CameraSpecPtr] =
+  var count: cint
+  var formats = getCameraSupportedFormats(instanceID, addr count)
+  result = newSeqOfCap[CameraSpecPtr](count)
+  for i in 0 ..< count:
+    result.add(formats[i])
+  
+proc getCameraName*(instanceID: CameraID): cstring {.importc: "SDL_GetCameraName".}
+proc getCameraPosition*(instanceID: CameraID): CameraPosition {.importc: "SDL_GetCameraPosition".}
+
+proc openCamera*(instanceID: CameraID, spec: CameraSpecPtr): CameraPtr {.importc: "SDL_OpenCamera".}
+proc closeCamera*(camera: CameraPtr): void {.importc: "SDL_CloseCamera".}
+proc close*(camera: CameraPtr): void {.discardable.} =
+  closeCamera(camera)
+
+proc getCameraPermissionState*(camera: CameraPtr): cint {.importc: "SDL_GetCameraPermissionState".}
+proc getCameraID*(camera: CameraPtr): CameraID {.importc: "SDL_GetCameraID".}
+proc getCameraProperties*(camera: CameraPtr): PropertiesID {.importc: "SDL_GetCameraProperties".}
+proc getCameraFormat*(camera: CameraPtr, spec: CameraSpecPtr): bool {.importc: "SDL_GetCameraFormat".}
+
+proc acquireCameraFrame*(camera: CameraPtr, timestampNS: ptr uint64): SurfacePtr {.importc: "SDL_AcquireCameraFrame".}
+proc acquireCameraFrame*(camera: CameraPtr): (SurfacePtr, uint64) =
+  var timestampNS: uint64
+  var frame = acquireCameraFrame(camera, addr timestampNS)
+  if frame.isNil:
+    echo getError()
+    result = (nil, 0)
+  else:
+    result = (frame, timestampNS)
+proc acquireFrame*(camera: CameraPtr, timestampNS: ptr uint64): SurfacePtr {.discardable.} =
+  acquireCameraFrame(camera, timestampNS)
+proc acquireFrame*(camera: CameraPtr): (SurfacePtr, uint64) {.discardable.} =
+  acquireCameraFrame(camera)
+
+proc releaseCameraFrame*(camera: CameraPtr, frame: SurfacePtr): void {.importc: "SDL_ReleaseCameraFrame".}
+proc releaseFrame*(camera: CameraPtr, frame: SurfacePtr): void {.discardable.} =
+  releaseCameraFrame(camera, frame)
 
 ## Section: SDL_events.h
 

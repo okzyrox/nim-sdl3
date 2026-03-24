@@ -15,7 +15,7 @@ Sections:
 [x] SDL_filesystem
 [x] SDL_rect
 [x] SDL_surface
-[/] SDL_video
+[x] SDL_video
 [0] SDL_gpu
 [0] SDL_guid
 [0] SDL_hidapi
@@ -46,8 +46,8 @@ Sections:
 [0] SDL_timer
 [0] SDL_tray
 [0] SDL_touch
-[0] SDL_dialog
-[0] SDL_camera
+[x] SDL_dialog
+[x] SDL_camera
 [/] SDL_events
 [/] SDL_render
 [/] SDL_init
