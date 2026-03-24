@@ -24,8 +24,8 @@ Sections:
 [0] SDL_joystick
 [0] SDL_haptic
 [0] SDL_gamepad
-[0] SDL_scancode
-[0] SDL_keycode
+[x] SDL_scancode
+[/] SDL_keycode
 [0] SDL_keyboard
 [0] SDL_loadso
 [0] SDL_locale
