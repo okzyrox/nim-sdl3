@@ -23,4 +23,4 @@ while not quit:
       of Quit:
         quit = true
       else:
-        echo "Event: ", $evt.eventType.ord
+        echo "Event: ", $evt.eventType.ord, " time:", $evt.common.timestamp

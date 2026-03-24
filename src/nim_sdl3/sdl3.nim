@@ -1942,9 +1942,320 @@ proc showSystemMenu*(window: WindowPtr, x, y: cint): bool {.discardable.} =
 
 ## Section: SDL_scancode.h
 
+type
+  ScanCode* {.size: sizeof(cint).} = enum
+    Unknown = 0
+
+    A = 4,
+    B = 5,
+    C = 6,
+    D = 7,
+    E = 8,
+    F = 9,
+    G = 10,
+    H = 11,
+    I = 12,
+    J = 13,
+    K = 14,
+    L = 15,
+    M = 16,
+    N = 17,
+    O = 18,
+    P = 19,
+    Q = 20,
+    R = 21,
+    S = 22,
+    T = 23,
+    U = 24,
+    V = 25,
+    W = 26,
+    X = 27,
+    Y = 28,
+    Z = 29,
+
+    ## Originally "_{i}"
+    One = 30,
+    Two = 31,
+    Three = 32,
+    Four = 33,
+    Five = 34,
+    Six = 35,
+    Seven = 36,
+    Eight = 37,
+    Nine = 38,
+    Zero = 39,
+
+    Return = 40,
+    Escape = 41,
+    Backspace = 42,
+    Tab = 43,
+    Space = 44,
+
+    Minus = 45,
+    Equals = 46,
+    LeftBracket = 47,
+    RightBracket = 48,
+    Backslash = 49,
+    NonUSHash = 50,
+    Semicolon = 51,
+    Apostrophe = 52,
+    Grave = 53,
+    Comma = 54,
+    Period = 55,
+    Slash = 56,
+
+    Capslock = 57,
+
+    F1 = 58,
+    F2 = 59,
+    F3 = 60,
+    F4 = 61,
+    F5 = 62,
+    F6 = 63,
+    F7 = 64,
+    F8 = 65,
+    F9 = 66,
+    F10 = 67,
+    F11 = 68,
+    F12 = 69,
+
+    Printscreen = 70,
+    ScrollLock = 71,
+    Pause = 72,
+    Insert = 73,
+    Home = 74,
+    PageUp = 75,
+    Delete = 76,
+    End = 77,
+    PageDown = 78,
+    Right = 79,
+    Left = 80,
+    Down = 81,
+    Up = 82,
+
+    NumLockClear = 83,
+    KeypadDivide = 84,
+    KeypadMultiply = 85,
+    KeypadMinus = 86,
+    KeypadPlus = 87,
+    KeypadEnter = 88,
+    KeypadOne = 89,
+    KeypadTwo = 90,
+    KeypadThree = 91,
+    KeypadFour = 92,
+    KeypadFive = 93,
+    KeypaxSix = 94,
+    KeypadSeven = 95,
+    KeypadEight = 96,
+    KeypadNine = 97,
+    KeypadZero = 98,
+    KeypadPeriod = 99,
+
+    NonUSBackslash = 100,
+    Application = 101,
+    Power = 102,
+    KeypadEquals = 103,
+    F13 = 104,
+    F14 = 105,
+    F15 = 106,
+    F16 = 107,
+    F17 = 108,
+    F18 = 109,
+    F19 = 110,
+    F20 = 111,
+    F21 = 112,
+    F22 = 113,
+    F23 = 114,
+    F24 = 115,
+    Execute = 116,
+    Help = 117,    #/**< AL Integrated Help Center */
+    Menu = 118,    #/**< Menu (show menu) */
+    Select = 119,
+    Stop = 120,    #/**< AC Stop */
+    Again = 121,   #/**< AC Redo/Repeat */
+    Undo = 122,    #/**< AC Undo */
+    Cut = 123,     #/**< AC Cut */
+    Copy = 124,    #/**< AC Copy */
+    Paste = 125,   #/**< AC Paste */
+    Find = 126,    #/**< AC Find */
+    Mute = 127,
+    VolumeUp = 128,
+    VolumeDown = 129,
+    # /*     LOCKINGCAPSLOCK = 130,  */
+    # /*     LOCKINGNUMLOCK = 131, */
+    # /*     LOCKINGSCROLLLOCK = 132, */
+    KeypadComma = 133,
+    KeypadEqualsAs400 = 134,
+
+    International1 = 135, #/**< used on Asian keyboards, see footnotes in USB doc */
+    International2 = 136,
+    International3 = 137, # /**< Yen */
+    International4 = 138,
+    International5 = 139,
+    International6 = 140,
+    International7 = 141,
+    International8 = 142,
+    International9 = 143,
+    Lang1 = 144, # /**< Hangul/English toggle */
+    Lang2 = 145, # /**< Hanja conversion */
+    Lang3 = 146, # /**< Katakana */
+    Lang4 = 147, # /**< Hiragana */
+    Lang5 = 148, # /**< Zenkaku/Hankaku */
+    Lang6 = 149, # /**< reserved */
+    Lang7 = 150, # /**< reserved */
+    Lang8 = 151, # /**< reserved */
+    Lang9 = 152, # /**< reserved */
+
+    AltErase = 153,    # /**< Erase-Eaze */
+    SysReq = 154,
+    Cancel = 155,      # /**< AC Cancel */
+    Clear = 156,
+    Prior = 157,
+    Return2 = 158,
+    Separator = 159,
+    Out = 160,
+    Oper = 161,
+    ClearAgain = 162,
+    CRSEL = 163,
+    EXSEL = 164,
+
+    KeypadZeroZero = 176,
+    KeypadZeroZeroZero = 177,
+    ThousandsSeparator = 178,
+    DecimalSeparator = 179,
+    CurrencyUnit = 180,
+    CurrencySubUnit = 181,
+    KeypadLeftParen = 182,
+    KeypadRightParen = 183,
+    KeypadLeftBrace = 184,
+    KeypadRightBrace = 185,
+    KeypadTab = 186,
+    KeypadBackspace = 187,
+    KeypadA = 188,
+    KeypadB = 189,
+    KeypadC = 190,
+    KeypadD = 191,
+    KeypadE = 192,
+    KeypadF = 193,
+    KeypadXOR = 194,
+    KeypadPower = 195,
+    KeypadPercent = 196,
+    KeypadLess = 197,
+    KeypadGreater = 198,
+    KeypadAmpersand = 199,
+    KeypadDBLAmpersand= 200,
+    KeypadVerticalBar = 201,
+    KeypadDBLVerticalBar = 202,
+    KeypadColon = 203,
+    KeypadHash = 204,
+    KeypadSpace = 205,
+    KeypadAt = 206,
+    KeypadExclam = 207,
+    KeypadMemStore = 208,
+    KeypadMemRecall = 209,
+    KeypadMemClear = 210,
+    KeypadMemAdd = 211,
+    KeypadMemSubtract = 212,
+    KeypadMemMultiply = 213,
+    KeypadMemDivide = 214,
+    KeypadPlusMinus = 215,
+    KeypadClear = 216,
+    KeypadClearEntry = 217,
+    KeypadBinary = 218,
+    KeypadOctal = 219,
+    KeypadDecimal = 220,
+    KeypadHexadecimal = 221,
+
+    LCtrl = 224,
+    LShift = 225,
+    LAlt = 226, # /**< alt, option */
+    LGui = 227, # /**< windows, command (apple), meta */
+    RCtrl = 228,
+    RShift = 229,
+    RAlt = 230, # /**< alt gr, option */
+    RGui = 231, # /**< windows, command (apple), meta */
+
+    Mode = 257,
+
+    #[
+    *  These values are mapped from usage page 0x0C (USB consumer page).
+    *
+    *  There are way more keys in the spec than we can represent in the
+    *  current scancode range, so pick the ones that commonly come up in
+    *  real world usage.
+    *
+    ]#
+
+    Sleep = 258,                   # /**< Sleep */
+    Wake = 259,                    # /**< Wake */
+
+    ChannelIncrement = 260,       # /**< Channel Increment */
+    ChannelDecrement = 261,       # /**< Channel Decrement */
+
+    MediaPlay = 262,          # /**< Play */
+    MediaPause = 263,         # /**< Pause */
+    MediaRecord = 264,        # /**< Record */
+    MediaFastForward = 265,  # /**< Fast Forward */
+    MediaRewind= 266,        # /**< Rewind */
+    MediaNextTrack = 267,    # /**< Next Track */
+    MediaPreviousTrack = 268, # /**< Previous Track */
+    MediaStop = 269,          # /**< Stop */
+    MediaEject = 270,         # /**< Eject */
+    MediaPlayPause = 271,    # /**< Play / Pause */
+    MediaSelect = 272,        # /* Media Select */
+
+    ACNew = 273,              # /**< AC New */
+    ACOpen = 274,             # /**< AC Open */
+    ACClose = 275,            # /**< AC Close */
+    ACExit = 276,             # /**< AC Exit */
+    ACSave = 277,             # /**< AC Save */
+    ACPrint = 278,            # /**< AC Print */
+    ACProperties = 279,       # /**< AC Properties */
+
+    ACSearch = 280,           # /**< AC Search */
+    ACHome = 281,             # /**< AC Home */
+    ACBack = 282,             # /**< AC Back */
+    ACForward = 283,          # /**< AC Forward */
+    ACStop = 284,             # /**< AC Stop */
+    ACRefresh = 285,          # /**< AC Refresh */
+    ACBookmarks = 286,        # /**< AC Bookmarks */
+
+
+    #[
+    *
+    *  These are values that are often used on mobile phones.
+    ]#
+
+    SoftLeft = 287, #[/**< Usually situated below the display on phones and
+                                  used as a multi-function feature key for selecting
+                                  a software defined function shown on the bottom left
+                                  of the display. ]#
+    SoftRight = 288, #[/**< Usually situated below the display on phones and
+                                  used as a multi-function feature key for selecting
+                                  a software defined function shown on the bottom right
+                                  of the display. */]#
+    Call = 289, # /**< Used for accepting phone calls. */
+    EndCall = 290, # /**< Used for rejecting phone calls. */
+
+    Reserved = 400,    # /**< 400-500 reserved for dynamic keycodes */
+
+    LastScancode = 511,
+
 
 ## Section: SDL_keycode.h
 
+type
+  Keycode = distinct uint32
+
+const
+  ## The SDLK_SCANCODE_MASK is how SDL distinguishes between keycodes and scancodes.
+  ## Keycodes have this mask bit set, while scancodes do not.
+  SCANCODE_MASK* = 1 shl 30
+
+proc keycode*(scancode: Scancode): Keycode {.inline.} =
+  Keycode(cint(scancode) or SCANCODE_MASK)
+
+# todo: keycodes
 
 ## Section: SDL_keyboard.h
 
@@ -2273,16 +2584,299 @@ type
     #...
     Last = 65535
   
-  CommonEvent* {.bycopy.} = object
+  CommonEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
     pad: uint32
     timestamp*: uint64
+  
+  DisplayEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    displayID*: DisplayID
+    data1*: int32
+    data2*: int32
+  
+  WindowEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    windowID*: WindowID
+    data1*: int32
+    data2*: int32
+  
+  KeyboardDeviceEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    # which*: KeyboardID
+    which*: uint32 # temp
+  
+  KeyboardEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    windowID*: WindowID
+    # scancode*: Scancode
+    # key*: Keycode
+    # keyMod*: Keymod
+    raw*: uint16
+    down*, repeat*: bool
+  
+  TextEditingEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    windowID*: WindowID
+    text*: cstring
+    start*, length*: int32
+
+  TextEditingCandidatesEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    windowID*: WindowID
+    candidates*: ptr UncheckedArray[cstring]
+    numCandidates*: int32
+    selectedCandidate*: int32
+    horizontal*: bool
+
+    pad2: uint8
+    pad3: uint8
+    pad4: uint8
+  
+  TextInputEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    windowID*: WindowID
+    text*: cstring
+  
+  MouseDeviceEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    #
+    # which*: MouseID
+    which*: uint32 # temp
+  
+  MouseMotionEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  MouseButtonEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  MouseWheelEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  JoyAxisEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  JoyBallEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  JoyHatEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  JoyButtonEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  JoyDeviceEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  JoyBatteryEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  GamepadAxisEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  GamepadButtonEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  GamepadDeviceEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  GamepadTouchpadEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  GamepadSensorEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  AudioDeviceEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    
+  CameraDeviceEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  RenderEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  TouchFingerEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  PenProximityEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  PenMotionEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  PenTouchEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  PenButtonEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+  
+  PenAxisEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  DropEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  ClipboardEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  SensorEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  QuitEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+  
+  UserEvent* {.bycopy, inheritable, pure.} = object
+    eventType*: EventType
+    pad1: uint32
+    timestamp*: uint64
+    # Temp
+
   ## Grahh, this union will look terrible or just be weird
   ## since we cant do case matching after we define more fields
   ## unless I make a template or something,...
 
-  Event* {.bycopy.} = object
-    eventType*: EventType
-    padding: array[124, uint8]
+  Event* {.union, bycopy.} = object
+    eventType*: EventType  
+    common*: CommonEvent
+    display*: DisplayEvent
+    window*: WindowEvent
+    kdevice*: KeyboardDeviceEvent
+    key*: KeyboardEvent
+    edit*: TextEditingEvent
+    edit_candidates*: TextEditingCandidatesEvent
+    text*: TextInputEvent
+    mdevice*: MouseDeviceEvent
+    motion*: MouseMotionEvent
+    button*: MouseButtonEvent
+    wheel*: MouseWheelEvent
+    jdevice*: JoyDeviceEvent
+    jaxis*: JoyAxisEvent
+    jball*: JoyBallEvent
+    jhat*: JoyHatEvent
+    jbutton*: JoyButtonEvent
+    jbattery*: JoyBatteryEvent
+    gdevice*: GamepadDeviceEvent
+    gaxis*: GamepadAxisEvent
+    gbutton*: GamepadButtonEvent
+    gtouchpad*: GamepadTouchpadEvent
+    gsensor*: GamepadSensorEvent
+    adevice*: AudioDeviceEvent
+    cdevice*: CameraDeviceEvent
+    sensor*: SensorEvent
+    quit*: QuitEvent
+    user*: UserEvent
+    tfinger*: TouchFingerEvent
+    pproximity*: PenProximityEvent
+    ptouch*: PenTouchEvent
+    pmotion*: PenMotionEvent
+    pbutton*: PenButtonEvent
+    paxis*: PenAxisEvent
+    render*: RenderEvent
+    drop*: DropEvent
+    clipboard*: ClipboardEvent
+    padding: array[128, uint8]
   EventPtr* = ptr Event
   
 
