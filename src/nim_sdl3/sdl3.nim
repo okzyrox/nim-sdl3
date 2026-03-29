@@ -1560,7 +1560,6 @@ proc flags*(e: varargs[WindowFlag]): WindowFlags {.inline.} =
     res = res or (1'u64 shl uint64(val))
   WindowFlags(res)
 
-
 proc getNumVideoDrivers*(): cint {.importc: "SDL_GetNumVideoDrivers".}
 proc getVideoDriver*(index: cint): cstring {.importc: "SDL_GetVideoDriver".}
 proc getCurrentVideoDriver*(): cstring {.importc: "SDL_GetCurrentVideoDriver".}
@@ -1613,7 +1612,9 @@ proc getWindows*(): seq[WindowPtr] =
   for i in 0 ..< count:
     result.add(windows[i])
 
-proc createWindow*(title: cstring, w, h: cint, flags: WindowFlags): WindowPtr {.importc: "SDL_CreateWindow".}
+proc createWindow*(title: cstring, w, h: cint, windowFlags: WindowFlags): WindowPtr {.importc: "SDL_CreateWindow".}
+proc createWindow*(title: cstring, w, h: cint, windowFlags: varargs[WindowFlag]): WindowPtr {.inline.} =
+  createWindow(title, w, h, flags(windowFlags))
 proc createPopupWindow*(parent: WindowPtr, offsetX, offsetY: cint, width, height: cint, flags: WindowFlags): WindowPtr {.importc: "SDL_CreatePopupWindow".}
 proc createWindowWithProperties*(props: PropertiesID): WindowPtr {.importc: "SDL_CreateWindowWithProperties".}
 
@@ -2926,6 +2927,213 @@ type
     LetterBox,
     Overscan,
     IntegerScale
+  
+  Texture* {.bycopy.} = object
+    format*: PixelFormat
+    w*, h*: cint
+    refCount*: cint
+  TexturePtr* = ptr Texture
+  
+  Renderer* = object
+  RendererPtr* = ptr Renderer
+
+const
+  SoftwareRenderer* = "software".cstring
+
+  RendererVsyncDisabled* = 0
+  RendererVsyncEnabled* = 1
+
+proc getNumRenderDrivers*(): cint {.importc: "SDL_GetNumRenderDrivers".}
+proc getRenderDriver*(index: cint): cstring {.importc: "SDL_GetRenderDriver".}
+
+proc createRenderer*(window: WindowPtr, name: cstring): RendererPtr {.importc: "SDL_CreateRenderer".}
+proc createRendererWithProperties*(properties: PropertiesId): RendererPtr {.importc: "SDL_CreateRendererWithProperties".}
+proc createRenderer*(properties: PropertiesId): RendererPtr {.inline.} =
+  createRendererWithProperties(properties)
+proc createSoftwareRenderer*(surface: SurfacePtr): RendererPtr {.importc: "SDL_CreateSoftwareRenderer".}
+
+proc getRenderer*(window: WindowPtr): RendererPtr {.importc: "SDL_GetRenderer".}
+proc getRenderWindow*(renderer: RendererPtr): WindowPtr {.importc: "SDL_GetRenderWindow".}
+proc getWindow*(renderer: RendererPtr): WindowPtr {.inline.} =
+  getRenderWindow(renderer)
+proc getRendererName*(renderer: RendererPtr): cstring {.importc: "SDL_GetRendererName".}
+proc getName*(renderer: RendererPtr): cstring {.inline.} =
+  getRendererName(renderer)
+proc getRendererProperties*(renderer: RendererPtr): PropertiesId {.importc: "SDL_GetRendererProperties".}
+proc getProperties*(renderer: RendererPtr): PropertiesId {.inline.} =
+  getRendererProperties(renderer)
+
+proc createTexture*(renderer: RendererPtr, format: PixelFormat, access: TextureAccess, w, h: cint): TexturePtr {.importc: "SDL_CreateTexture".}
+proc createTextureFromSurface*(renderer: RendererPtr, surface: SurfacePtr): TexturePtr {.importc: "SDL_CreateTextureFromSurface".}
+proc createTexture*(renderer: RendererPtr, surface: SurfacePtr): TexturePtr {.inline.} =
+  createTextureFromSurface(renderer, surface)
+proc createTextureWithProperties*(renderer: RendererPtr, properties: PropertiesId): TexturePtr {.importc: "SDL_CreateTextureWithProperties".}
+proc createTexture*(renderer: RendererPtr, properties: PropertiesId): TexturePtr {.inline.} =
+  createTextureWithProperties(renderer, properties)
+
+proc getTextureProperties*(texture: TexturePtr): PropertiesId {.importc: "SDL_GetTextureProperties".}
+proc getProperties*(texture: TexturePtr): PropertiesId {.inline.} =
+  getTextureProperties(texture)
+proc getRendererFromTexture*(texture: TexturePtr): RendererPtr {.importc: "SDL_GetRendererFromTexture".}
+proc getRenderer*(texture: TexturePtr): RendererPtr {.inline.} =
+  getRendererFromTexture(texture)
+proc getRenderTarget*(renderer: RendererPtr): TexturePtr {.importc: "SDL_GetRenderTarget".}
+proc getTarget*(renderer: RendererPtr): TexturePtr {.inline.} =
+  getRenderTarget(renderer)
+
+proc renderViewportSet*(renderer: RendererPtr): bool {.importc: "SDL_RenderViewportSet".}
+proc isViewportSet*(renderer: RendererPtr): bool {.inline.} =
+  renderViewportSet(renderer)
+
+proc renderClipEnabled*(renderer: RendererPtr): bool {.importc: "SDL_RenderClipEnabled".}
+proc isClipEnabled*(renderer: RendererPtr): bool {.inline.} =
+  renderClipEnabled(renderer)
+
+proc renderReadPixels*(renderer: RendererPtr, rect: ptr Rect = nil): SurfacePtr {.importc: "SDL_RenderReadPixels".}
+proc renderReadPixels*(renderer: RendererPtr, rect: Rect): SurfacePtr {.inline.} =
+  var nRect = rect
+  renderReadPixels(renderer, addr nRect)
+proc readPixels*(renderer: RendererPtr, rect: ptr Rect = nil): SurfacePtr {.inline.} =
+  renderReadPixels(renderer, rect)
+proc readPixels*(renderer: RendererPtr, rect: Rect): SurfacePtr {.inline.} =
+  readPixels(renderer, addr rect)
+
+proc getRenderMetalLayer*(renderer: RendererPtr): ptr {.importc: "SDL_GetRenderMetalLayer".}
+proc getMetalLayer*(renderer: RendererPtr): ptr {.inline.} =
+  getRenderMetalLayer(renderer)
+
+proc getRenderMetalLayerCommandEncoder*(renderer: RendererPtr): ptr {.importc: "SDL_GetRenderMetalLayerCommandEncoder".}
+proc getMetalLayerCommandEncoder*(renderer: RendererPtr): ptr {.inline.} =
+  getRenderMetalLayerCommandEncoder(renderer)
+
+proc createWindowAndRenderer*(title: cstring, width, height: cint, windowFlags: WindowFlags, outWindow: ptr WindowPtr, outRenderer: ptr RendererPtr): bool {.importc: "SDL_CreateWindowAndRenderer".}
+proc createWindowAndRenderer*(title: cstring, width, height: cint, windowFlags: WindowFlags): (WindowPtr, RendererPtr) =
+  var window: WindowPtr
+  var renderer: RendererPtr
+  if createWindowAndRenderer(title, width, height, windowFlags, addr window, addr renderer):
+    result = (window, renderer)
+  else:
+    echo getError()
+    result = (nil, nil)
+proc createWindowAndRenderer*(title: cstring, width, height: cint, windowFlags: varargs[WindowFlag]): (WindowPtr, RendererPtr) =
+  createWindowAndRenderer(title, width, height, flags(windowFlags))
+
+proc getRenderOutputSize*(renderer: RendererPtr, w, h: ptr cint): bool {.importc: "SDL_GetRenderOutputSize".}
+proc getRenderOutputSize*(renderer: RendererPtr): (cint, cint) =
+  var w, h: cint
+  if getRenderOutputSize(renderer, addr w, addr h):
+    result = (w, h)
+  else:
+    echo getError()
+    result = (0, 0)
+proc getOutputSize*(renderer: RendererPtr, w, h: ptr cint): bool {.inline.} =
+  getRenderOutputSize(renderer, w, h)
+proc getOutputSize*(renderer: RendererPtr): (cint, cint) {.inline.} =
+  getRenderOutputSize(renderer)
+
+proc getTextureSize*(texture: TexturePtr, w, h: ptr cint): bool {.importc: "SDL_GetTextureSize".}
+proc getTextureSize*(texture: TexturePtr): (cint, cint) =
+  var w, h: cint
+  if getTextureSize(texture, addr w, addr h):
+    result = (w, h)
+  else:
+    echo getError()
+    result = (0, 0)
+proc getSize*(texture: TexturePtr, w, h: ptr cint): bool {.inline.} =
+  getTextureSize(texture, w, h)
+proc getSize*(texture: TexturePtr): (cint, cint) {.inline.} =
+  getTextureSize(texture)
+
+#[
+	SetTextureColorMod               :: proc(texture: ^Texture, r, g, b: Uint8) -> bool ---
+	SetTextureColorModFloat          :: proc(texture: ^Texture, r, g, b: f32) -> bool ---
+	GetTextureColorMod               :: proc(texture: ^Texture, r, g, b: ^Uint8) -> bool ---
+	GetTextureColorModFloat          :: proc(texture: ^Texture, r, g, b: ^f32) -> bool ---
+	SetTextureAlphaMod               :: proc(texture: ^Texture, alpha: Uint8) -> bool ---
+	SetTextureAlphaModFloat          :: proc(texture: ^Texture, alpha: f32) -> bool ---
+	GetTextureAlphaMod               :: proc(texture: ^Texture, alpha: ^Uint8) -> bool ---
+	GetTextureAlphaModFloat          :: proc(texture: ^Texture, alpha: ^f32) -> bool ---
+	SetTextureBlendMode              :: proc(texture: ^Texture, blendMode: BlendMode) -> bool ---
+	GetTextureBlendMode              :: proc(texture: ^Texture, blendMode: ^BlendMode) -> bool ---
+	SetTextureScaleMode              :: proc(texture: ^Texture, scaleMode: ScaleMode) -> bool ---
+	GetTextureScaleMode              :: proc(texture: ^Texture, scaleMode: ^ScaleMode) -> bool ---
+	UpdateTexture                    :: proc(texture: ^Texture, rect: Maybe(^Rect), pixels: rawptr, pitch: c.int) -> bool ---
+	UpdateYUVTexture                 :: proc(texture: ^Texture, rect: Maybe(^Rect), Yplane: [^]Uint8, Ypitch: c.int, Uplane: [^]Uint8, Upitch: c.int, Vplane: [^]Uint8, Vpitch: c.int) -> bool ---
+	UpdateNVTexture                  :: proc(texture: ^Texture, rect: Maybe(^Rect), Yplane: [^]Uint8, Ypitch: c.int, UVplane: [^]Uint8, UVpitch: c.int) -> bool ---
+	LockTexture                      :: proc(texture: ^Texture, rect: Maybe(^Rect), pixels: ^rawptr, pitch: ^c.int) -> bool ---
+	LockTextureToSurface             :: proc(texture: ^Texture, rect: Maybe(^Rect), surface: ^^Surface) -> bool ---
+	UnlockTexture                    :: proc(texture: ^Texture) ---
+	SetRenderTarget                  :: proc(renderer: ^Renderer, texture: Maybe(^Texture)) -> bool ---
+	SetRenderLogicalPresentation     :: proc(renderer: ^Renderer, w, h: c.int, mode: RendererLogicalPresentation) -> bool ---
+	GetRenderLogicalPresentation     :: proc(renderer: ^Renderer, w, h: ^c.int, mode: ^RendererLogicalPresentation) -> bool ---
+	GetRenderLogicalPresentationRect :: proc(renderer: ^Renderer, rect: ^FRect) -> bool ---
+	RenderCoordinatesFromWindow      :: proc(renderer: ^Renderer, window_x, window_y: f32, x, y: ^f32) -> bool ---
+	RenderCoordinatesToWindow        :: proc(renderer: ^Renderer, x, y: f32, window_x, window_y: ^f32) -> bool ---
+	ConvertEventToRenderCoordinates  :: proc(renderer: ^Renderer, event: ^Event) -> bool ---
+	SetRenderViewport                :: proc(renderer: ^Renderer, rect: Maybe(^Rect)) -> bool ---
+	GetRenderViewport                :: proc(renderer: ^Renderer, rect: ^Rect) -> bool ---
+	GetRenderSafeArea                :: proc(renderer: ^Renderer, rect: ^Rect) -> bool ---
+	SetRenderClipRect                :: proc(renderer: ^Renderer, rect: Maybe(^Rect)) -> bool ---
+	GetRenderClipRect                :: proc(renderer: ^Renderer, rect: ^Rect) -> bool ---
+	SetRenderScale                   :: proc(renderer: ^Renderer, scaleX, scaleY: f32) -> bool ---
+	GetRenderScale                   :: proc(renderer: ^Renderer, scaleX, scaleY: ^f32) -> bool ---
+	SetRenderDrawColor               :: proc(renderer: ^Renderer, r, g, b, a: Uint8) -> bool ---
+	SetRenderDrawColorFloat          :: proc(renderer: ^Renderer, r, g, b, a: f32) -> bool ---
+	GetRenderDrawColor               :: proc(renderer: ^Renderer, r, g, b, a: ^Uint8) -> bool ---
+	GetRenderDrawColorFloat          :: proc(renderer: ^Renderer, r, g, b, a: ^f32) -> bool ---
+	SetRenderColorScale              :: proc(renderer: ^Renderer, scale: f32) -> bool ---
+	GetRenderColorScale              :: proc(renderer: ^Renderer, scale: ^f32) -> bool ---
+	SetRenderDrawBlendMode           :: proc(renderer: ^Renderer, blendMode: BlendMode) -> bool ---
+	GetRenderDrawBlendMode           :: proc(renderer: ^Renderer, blendMode: ^BlendMode) -> bool ---
+	RenderClear                      :: proc(renderer: ^Renderer) -> bool ---
+	RenderPoint                      :: proc(renderer: ^Renderer, x, y: f32) -> bool ---
+	RenderPoints                     :: proc(renderer: ^Renderer, points: [^]FPoint, count: c.int) -> bool ---
+	RenderLine                       :: proc(renderer: ^Renderer, x1, y1, x2, y2: f32) -> bool ---
+	RenderLines                      :: proc(renderer: ^Renderer, points: [^]FPoint, count: c.int) -> bool ---
+	RenderRect                       :: proc(renderer: ^Renderer, rect: Maybe(^FRect)) -> bool ---
+	RenderRects                      :: proc(renderer: ^Renderer, rects: [^]FRect, count: c.int) -> bool ---
+	RenderFillRect                   :: proc(renderer: ^Renderer, rect: Maybe(^FRect)) -> bool ---
+	RenderFillRects                  :: proc(renderer: ^Renderer, rects: [^]FRect, count: c.int) -> bool ---
+	RenderTexture                    :: proc(renderer: ^Renderer, texture: ^Texture, srcrect, dstrect: Maybe(^FRect)) -> bool ---
+	RenderTextureRotated             :: proc(renderer: ^Renderer, texture: ^Texture, srcrect, dstrect: Maybe(^FRect), angle: f64, #by_ptr center: FPoint, flip: FlipMode) -> bool ---
+	RenderTextureAffine              :: proc(renderer: ^Renderer, texture: ^Texture, srcrect: Maybe(^FRect), origin, right, down: Maybe(^FPoint)) -> bool ---
+	RenderTextureTiled               :: proc(renderer: ^Renderer, texture: ^Texture, srcrect: Maybe(^FRect), scale: f32, dstrect: Maybe(^FRect)) -> bool ---
+	RenderTexture9Grid               :: proc(renderer: ^Renderer, texture: ^Texture, srcrect: Maybe(^FRect), left_width, right_width, top_height, bottom_height: f32, scale: f32, dstrect: Maybe(^FRect)) -> bool ---
+	RenderGeometry                   :: proc(renderer: ^Renderer, texture: ^Texture, vertices: [^]Vertex, num_vertices: c.int, indices: [^]c.int, num_indices: c.int) -> bool ---
+	RenderGeometryRaw                :: proc(renderer: ^Renderer, texture: ^Texture, xy: [^]f32, xy_stride: c.int, color: [^]FColor, color_stride: c.int, uv: [^]f32, uv_stride: c.int, num_vertices: c.int, indices: rawptr, num_indices: c.int, size_indices: c.int) -> bool ---
+	RenderPresent                    :: proc(renderer: ^Renderer) -> bool ---
+	DestroyTexture                   :: proc(texture: ^Texture) ---
+	DestroyRenderer                  :: proc(renderer: ^Renderer) ---
+	FlushRenderer                    :: proc(renderer: ^Renderer) -> bool ---
+	AddVulkanRenderSemaphores        :: proc(renderer: ^Renderer, wait_stage_mask: Uint32, wait_semaphore, signal_semaphore: Sint64) -> bool ---
+	SetRenderVSync                   :: proc(renderer: ^Renderer, vsync: c.int) -> bool ---
+	GetRenderVSync                   :: proc(renderer: ^Renderer, vsync: ^c.int) -> bool ---
+	RenderDebugTextFormat            :: proc(renderer: ^Renderer, x, y: f32, fmt: cstring, #c_vararg args: ..any) -> bool ---
+
+
+]#
+
+proc renderClear*(renderer: RendererPtr): bool {.importc: "SDL_RenderClear".}
+proc clear*(renderer: RendererPtr): bool {.inline, discardable.} =
+  renderClear(renderer)
+proc renderPresent*(renderer: RendererPtr): bool {.importc: "SDL_RenderPresent".}
+proc present*(renderer: RendererPtr): bool {.inline, discardable.} =
+  renderPresent(renderer)
+proc renderFlush*(renderer: RendererPtr): bool {.importc: "SDL_FlushRenderer".}
+proc flush*(renderer: RendererPtr): bool {.inline, discardable.} =
+  renderFlush(renderer)
+
+proc setRenderDrawColor*(renderer: RendererPtr, r, g, b, a: uint8): bool {.importc: "SDL_SetRenderDrawColor".}
+proc setRenderDrawColor*(renderer: RendererPtr, r, g, b: uint8): bool {.inline.} =
+  setRenderDrawColor(renderer, r, g, b, 255'u8)
+proc setDrawColor*(renderer: RendererPtr, r, g, b, a: uint8): bool {.discardable.} =
+  setRenderDrawColor(renderer, r, g, b, a)
+proc setDrawColor*(renderer: RendererPtr, r, g, b: uint8): bool {.discardable.} =
+  setDrawColor(renderer, r, g, b, 255'u8)
+
+proc renderDebugText*(renderer: RendererPtr, x, y: float32, str: cstring): bool {.importc: "SDL_RenderDebugText".}
+proc debugText*(renderer: RendererPtr, x, y: float32, str: cstring): bool {.inline, discardable.} =
+  renderDebugText(renderer, x, y, str)
 
 ## Section: SDL_init.h
 
@@ -2958,10 +3166,12 @@ proc flags*(e: varargs[InitFlag]): InitFlags {.inline.} =
     res = res or (1'u32 shl uint32(val))
   InitFlags(res)
 
-proc init*(flags: InitFlags): bool {.importc: "SDL_Init".}
-proc initSubSystem*(flags: InitFlags): bool {.importc: "SDL_InitSubSystem".}
-proc quitSubSystem*(flags: InitFlags): void {.importc: "SDL_QuitSubSystem".}
-proc quit*(): void {.importc: "SDL_Quit".}
+proc initSDL*(flags: InitFlags): bool {.importc: "SDL_Init".}
+proc initSDL*(initFlags: varargs[InitFlag]): bool {.inline.} =
+  initSDL(flags(initFlags))
+proc initSDLSubSystem*(flags: InitFlags): bool {.importc: "SDL_InitSubSystem".}
+proc quitSDLSubSystem*(flags: InitFlags): void {.importc: "SDL_QuitSubSystem".}
+proc quitSDL*(): void {.importc: "SDL_Quit".}
 proc wasInit*(flags: InitFlags): InitFlags {.importc: "SDL_WasInit".}
 
 proc isMainThread*(): bool {.importc: "SDL_IsMainThread".}

@@ -1,26 +1,54 @@
 import ../src/nim_sdl3
 
 
-if init(flags(Video, Events)):
-  echo "SDL initialised successfully!"
-else:
-  echo "Failed to initialise SDL: ", getError()
+proc main() =
+  if initSDL(Video, Events):
+    echo "SDL initialised successfully!"
+  else:
+    echo "Failed to initialise SDL: ", getError()
 
+  let (window, renderer) = createWindowAndRenderer("Test", 400, 400, OpenGl)
+  if window.isNil:
+    echo "Failed to create window"
+    quitSDL()
+  elif renderer.isNil:
+    echo "Failed to create renderer"
+    quitSDL()
+  else:
+    echo "Window and Renderer created successfully!"
 
-let windowFlags = flags(OpenGL)
-let window = createWindow("Test", 800, 800, windowFlags)
-if window.isNil:
-  echo "Failed to create window: ", getError()
-else:
-  echo "Window created successfully!"
+  echo "Renderer: " & $renderer.getName()
 
-var evt: Event
-var quit = false
+  var surface: SurfacePtr = nil
 
-while not quit:
-  while pollEvent(evt):
-    case evt.eventType:
-      of Quit:
+  var
+    pixels1: uint8
+    pixels2: uint8
+    pixels3: uint8
+    pixels4: uint8
+
+  discard readSurfacePixel(surface, 0, 0, addr pixels1, addr pixels2, addr pixels3, addr pixels4)
+
+  surface.readPixel(0, 0, addr pixels1, addr pixels2, addr pixels3, addr pixels4)
+
+  (pixels1, pixels2, pixels3, pixels4) = surface.readPixel(0, 0)
+
+  var evt: Event
+  var quit = false
+
+  while not quit:
+    while pollEvent(evt):
+      if evt.eventType == Quit:
         quit = true
-      else:
-        echo "Event: ", $evt.eventType.ord, " time:", $evt.common.timestamp
+
+    renderer.setDrawColor(0, 0, 0, 255)
+    renderer.clear()
+
+    renderer.setDrawColor(255, 255, 255, 255)
+    renderer.debugText(10, 10, "Hello SDL3 from Nim!")
+
+    renderer.present()
+  quitSDL()
+
+when isMainModule:
+  main()
