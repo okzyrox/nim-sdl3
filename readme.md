@@ -48,14 +48,15 @@ when isMainModule:
 ### Bindings
 
 > [!NOTE]
-> With the bindings, there are function overloads either to simplify the function name, or to simplify the output. I mainly did this out of inspiration of other Nim bindings like Naylib. <br>
+> With the bindings, there are function overloads either to simplify the function name, or to simplify the output. I mainly did this out of inspiration of other Nim bindings like Naylib whilst still providing functions that match the original implementation. <br>
 > Example:
 ```nim
 proc readSurfacePixel(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr uint8): bool # Refers to SDL_ReadSurfacePixel
 proc readPixel(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr uint8): bool # Generic simplification, implicitly discardable
 proc readPixel(surface: SurfacePtr, x, y: cint): (uint8, uint8, uint8, uint8) # Pointer simplification
 
-# In some cases where the function returns a boolean, a `.` call function is provided as well. Ex: `window.position` == `SDL_GetWindowPosition(window)`
+# In some cases where the function returns a boolean, a `.` call function is provided as well. 
+# Ex: `window.position` == `SDL_GetWindowPosition(window)`
 
 # All of these do the same thing
 # ...
