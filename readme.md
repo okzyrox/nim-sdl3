@@ -55,8 +55,13 @@ proc readSurfacePixel(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr uint8): b
 proc readPixel(surface: SurfacePtr, x, y: cint, r, g, b, a: ptr uint8): bool # Generic simplification, implicitly discardable
 proc readPixel(surface: SurfacePtr, x, y: cint): (uint8, uint8, uint8, uint8) # Pointer simplification
 
-# In some cases where the function returns a boolean, a `.` call function is provided as well. 
-# Ex: `window.position` == `SDL_GetWindowPosition(window)`
+# In some cases where the function returns a boolean, 
+# a `.` call function is provided as well. 
+# Ex:`window.position` == `SDL_GetWindowPosition(window)`
+
+# Not all functions have simplifications available, 
+# and some may have their return types added to the function name 
+# so that it isn't ambigious
 
 # All of these do the same thing
 # ...

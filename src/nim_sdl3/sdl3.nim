@@ -983,14 +983,14 @@ proc getSystemPageSize*(): cint {.importc: "SDL_GetSystemPageSize".}
 ## Section: SDL_error.h
 
 #TODO: figure out c varargs
-# proc setError*(fmt: cstring, args: varargs[auto]): bool {.importc: "SDL_SetError".}
-# proc setErrorVa*(fmt: cstring, args: varargs[auto]): bool {.importc: "SDL_SetErrorVa".}
+proc setError*(fmt: cstring): bool {.importc: "SDL_SetError", varargs.}
+proc setErrorVa*(fmt: cstring): bool {.importc: "SDL_SetErrorVa", varargs.}
 
-# template Unsupported() =
-  # setError("That operation is not supported")
+template Unsupported() =
+  setError("That operation is not supported")
 
-# template InvalidParamError*(param: typed): bool =
-  # setError("Parameter '%s' is invalid", $(param))
+template InvalidParamError*(param: typed): bool =
+  setError("Parameter '%s' is invalid", $(param))
 
 proc outOfMemory*(): void {.importc: "SDL_OutOfMemory".}
 proc getError*(): cstring {.importc: "SDL_GetError".}
@@ -1832,17 +1832,8 @@ proc updateSurface*(window: WindowPtr): bool {.discardable.} =
 proc updateWindowSurfaceRects*(window: WindowPtr, rects: ptr UncheckedArray[Rect], numRects: cint): bool {.importc: "SDL_UpdateWindowSurfaceRects".}
 proc updateSurfaceRects*(window: WindowPtr, rects: ptr UncheckedArray[Rect], numRects: cint): bool {.discardable.} =
   updateWindowSurfaceRects(window, rects, numRects)
-proc updateSurfaceRects*(window: WindowPtr, rects: seq[Rect]): bool {.discardable.} =
-  result = false
-  var rectsArray: ptr UncheckedArray[Rect] = nil
-  if rects.len > 0:
-    ## aaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-    rectsArray = cast[ptr UncheckedArray[Rect]](realloc(rectsArray, Rect.sizeof * rects.len))
-    for i in 0 ..< rects.len:
-      rectsArray[i] = rects[i]
-    result = updateWindowSurfaceRects(window, rectsArray, rects.len.cint)
-    defer:
-      rectsArray = cast[ptr UncheckedArray[Rect]](realloc(rectsArray, 0))
+proc updateSurfaceRects*(window: WindowPtr, rects: openArray[Rect]): bool {.discardable.} =
+  updateSurfaceRects(window, cast[ptr UncheckedArray[Rect]](rects), rects.len.cint)
 
 proc destroyWindowSurface*(window: WindowPtr): bool {.importc: "SDL_DestroyWindowSurface".}
 proc destroySurface*(window: WindowPtr): bool {.discardable.} =
@@ -2311,6 +2302,36 @@ proc keycode*(scancode: Scancode): Keycode {.inline.} =
 
 ## Section: SDL_timer.h
 
+type
+  TimerID* = distinct uint32
+
+  TimerCb* = proc(userdata: ptr, timerID: TimerID, interval: uint32): uint64 {.cdecl.}
+  NSTimerCb* = proc(userdata: ptr, timerID: TimerID, interval: uint64): uint64 {.cdecl.}
+
+const
+  MS_PER_SECOND = 1000
+  US_PER_SECOND = 1000000
+  NS_PER_SECOND = 1000000000
+  NS_PER_MS = 1000000
+  NS_PER_US = 1000
+
+proc SECONDS_TO_NS(S: uint64): uint64 {.inline.} = S * NS_PER_SECOND
+proc NS_TO_SECONDS(NS: uint64): uint64 {.inline.} = NS div NS_PER_SECOND
+proc MS_TO_NS(MS: uint64): uint64 {.inline.} = MS * NS_PER_MS
+proc NS_TO_MS(NS: uint64): uint64 {.inline.} = NS div NS_PER_MS
+proc US_TO_NS(US: uint64): uint64 {.inline.} = US * NS_PER_US
+proc NS_TO_US(NS: uint64): uint64 {.inline.} = NS div NS_PER_US
+
+proc getTicks*(): uint64 {.importc: "SDL_GetTicks".}
+proc getTicksNS*(): uint64 {.importc: "SDL_GetTicksNS".}
+proc getPerformanceCounter*(): uint64 {.importc: "SDL_GetPerformanceCounter".}
+proc getPerformanceFrequency*(): uint64 {.importc: "SDL_GetPerformanceFrequency".}
+proc delay*(ms: uint32): void {.importc: "SDL_Delay".}
+proc delayNS*(ns: uint64): void {.importc: "SDL_DelayNS".}
+proc delayPrecise*(ns: uint64): void {.importc: "SDL_DelayPrecise".}
+proc addTimer*(interval: uint32, callback: TimerCb, userdata: ptr): TimerID {.importc: "SDL_AddTimer".}
+proc addTimerNS*(interval: uint64, callback: NSTimerCb, userdata: ptr): TimerID {.importc: "SDL_AddTimerNS".}
+proc removeTimer*(id: TimerID): bool {.importc: "SDL_RemoveTimer".}
 
 ## Section: SDL_tray.h
 
@@ -2584,6 +2605,11 @@ type
     User = 32768,
     #...
     Last = 65535
+  
+  EventAction* {.size: sizeof(cint).} = enum
+    AddEvent,
+    PeekEvent,
+    GetEvent
   
   CommonEvent* {.bycopy, inheritable, pure.} = object
     eventType*: EventType
@@ -2879,35 +2905,66 @@ type
     clipboard*: ClipboardEvent
     padding: array[128, uint8]
   EventPtr* = ptr Event
+
+  EventFilterCb* = proc(userdata: ptr, event: EventPtr): cint {.cdecl.}
   
 
 proc pollEvent*(event: EventPtr): bool {.importc: "SDL_PollEvent", discardable.}
 proc pollEvent*(event: var Event): bool {.inline, discardable.} =
   pollEvent(addr event)
 
-#[
+proc pumpEvents*() {.importc: "SDL_PumpEvents".}
+proc peepEvents*(outEvents: ptr UncheckedArray[Event], numEvents: cint, action: EventAction, minType, maxType: uint32): cint {.importc: "SDL_PeepEvents".}
 
-	PumpEvents          :: proc() ---
-	PeepEvents          :: proc(events: [^]Event, numevents: c.int, action: EventAction, minType, maxType: EventType) -> int ---
-	HasEvent            :: proc(type: EventType) -> bool ---
-	HasEvents           :: proc(minType, maxType: EventType) -> bool ---
-	FlushEvent          :: proc(type: EventType) ---
-	FlushEvents         :: proc(minType, maxType: EventType) ---
-	WaitEvent           :: proc(event: ^Event) -> bool ---
-	WaitEventTimeout    :: proc(event: ^Event, timeoutMS: Sint32) -> bool ---
-	PushEvent           :: proc(event: ^Event) -> bool ---
-	SetEventFilter      :: proc(filter: EventFilter, userdata: rawptr) ---
-	GetEventFilter      :: proc(filter: ^EventFilter, userdata: ^rawptr) -> bool ---
-	AddEventWatch       :: proc(filter: EventFilter, userdata: rawptr) -> bool ---
-	RemoveEventWatch    :: proc(filter: EventFilter, userdata: rawptr) ---
-	FilterEvents        :: proc(filter: EventFilter, userdata: rawptr) ---
-	SetEventEnabled     :: proc(type: EventType, enabled: bool) ---
-	EventEnabled        :: proc(type: EventType) -> bool ---
-	RegisterEvents      :: proc(numevents: c.int) -> Uint32 ---
-	GetWindowFromEvent  :: proc(#by_ptr event: Event) -> ^Window ---
-	GetEventDescription :: proc(#by_ptr event: Event, buf: [^]u8, buflen: c.int) -> c.int ---
+# yeah no
+# proc peepEvents*(numEvents: cint, action: EventAction, minType, maxType: uint32): seq[Event] =
+#   var outEvents = newSeqOfCap[Event](numEvents)
 
-]#
+proc hasEvent*(eventType: EventType): bool {.importc: "SDL_HasEvent".}
+proc hasEvents*(minType, maxType: EventType): bool {.importc: "SDL_HasEvents".}
+proc flushEvent*(eventType: EventType) {.importc: "SDL_FlushEvent".}
+proc flushEvents*(minType, maxType: EventType) {.importc: "SDL_FlushEvents".}
+
+proc waitEvent*(event: EventPtr): bool {.importc: "SDL_WaitEvent".}
+proc waitEvent*(event: var Event): bool {.inline.} =
+  waitEvent(addr event)
+proc waitEvent*(): EventPtr =
+  var event: Event
+  if waitEvent(addr event):
+    return event.addr
+  else:
+    nil
+
+proc waitEventTimeout*(event: EventPtr, timeoutMs: int32): bool {.importc: "SDL_WaitEventTimeout".}
+proc waitEventTimeout*(event: var Event, timeoutMs: int32): bool {.inline.} =
+  waitEventTimeout(addr event, timeoutMs)
+proc waitEventTimeout*(timeoutMs: int32): EventPtr =
+  var event: Event
+  if waitEventTimeout(addr event, timeoutMs):
+    return event.addr
+  else:
+    nil
+
+proc setEventFilter*(filter: EventFilterCb, userdata: ptr) {.importc: "SDL_SetEventFilter".}
+proc getEventFilter*(filter: ptr EventFilterCb, userdata: ptr ptr): bool {.importc: "SDL_GetEventFilter".}
+proc addEventWatch*(filter: EventFilterCb, userdata: ptr): bool {.importc: "SDL_AddEventWatch".}
+proc removeEventWatch*(filter: EventFilterCb, userdata: ptr): void {.importc: "SDL_RemoveEventWatch".}
+proc filterEvents*(filter: EventFilterCb, userdata: ptr): void {.importc: "SDL_FilterEvents".}
+
+proc setEventEnabled*(eventType: EventType, enabled: bool) {.importc: "SDL_SetEventEnabled".}
+## dunno about this one, although it is nice to do `EventType.KeyDown.enabled = false` or something
+proc `enabled=`*(eventType: EventType, enabled: bool) {.inline.} =
+  setEventEnabled(eventType, enabled)
+proc eventEnabled*(eventType: EventType): bool {.importc: "SDL_EventEnabled".}
+proc isEventEnabled*(eventType: EventType): bool {.inline.} =
+  eventEnabled(eventType)
+proc `enabled`*(eventType: EventType): bool {.inline.} =
+  eventEnabled(eventType)
+
+proc registerEvents*(numEvents: cint): uint32 {.importc: "SDL_RegisterEvents".}
+
+proc getWindowFromEvent*(event: EventPtr): WindowPtr {.importc: "SDL_GetWindowFromEvent".}
+proc getEventDescription*(event: EventPtr, buf: ptr UncheckedArray[uint8], buflen: cint): cint {.importc: "SDL_GetEventDescription".}
 
 ## Section: SDL_render.h
 
@@ -2927,6 +2984,11 @@ type
     LetterBox,
     Overscan,
     IntegerScale
+  
+  Vertex* {.bycopy.} = object
+    position*: FPoint
+    color*: FColor
+    texCoord*: FPoint
   
   Texture* {.bycopy.} = object
     format*: PixelFormat
@@ -3044,96 +3106,505 @@ proc getSize*(texture: TexturePtr, w, h: ptr cint): bool {.inline.} =
 proc getSize*(texture: TexturePtr): (cint, cint) {.inline.} =
   getTextureSize(texture)
 
-#[
-	SetTextureColorMod               :: proc(texture: ^Texture, r, g, b: Uint8) -> bool ---
-	SetTextureColorModFloat          :: proc(texture: ^Texture, r, g, b: f32) -> bool ---
-	GetTextureColorMod               :: proc(texture: ^Texture, r, g, b: ^Uint8) -> bool ---
-	GetTextureColorModFloat          :: proc(texture: ^Texture, r, g, b: ^f32) -> bool ---
-	SetTextureAlphaMod               :: proc(texture: ^Texture, alpha: Uint8) -> bool ---
-	SetTextureAlphaModFloat          :: proc(texture: ^Texture, alpha: f32) -> bool ---
-	GetTextureAlphaMod               :: proc(texture: ^Texture, alpha: ^Uint8) -> bool ---
-	GetTextureAlphaModFloat          :: proc(texture: ^Texture, alpha: ^f32) -> bool ---
-	SetTextureBlendMode              :: proc(texture: ^Texture, blendMode: BlendMode) -> bool ---
-	GetTextureBlendMode              :: proc(texture: ^Texture, blendMode: ^BlendMode) -> bool ---
-	SetTextureScaleMode              :: proc(texture: ^Texture, scaleMode: ScaleMode) -> bool ---
-	GetTextureScaleMode              :: proc(texture: ^Texture, scaleMode: ^ScaleMode) -> bool ---
-	UpdateTexture                    :: proc(texture: ^Texture, rect: Maybe(^Rect), pixels: rawptr, pitch: c.int) -> bool ---
-	UpdateYUVTexture                 :: proc(texture: ^Texture, rect: Maybe(^Rect), Yplane: [^]Uint8, Ypitch: c.int, Uplane: [^]Uint8, Upitch: c.int, Vplane: [^]Uint8, Vpitch: c.int) -> bool ---
-	UpdateNVTexture                  :: proc(texture: ^Texture, rect: Maybe(^Rect), Yplane: [^]Uint8, Ypitch: c.int, UVplane: [^]Uint8, UVpitch: c.int) -> bool ---
-	LockTexture                      :: proc(texture: ^Texture, rect: Maybe(^Rect), pixels: ^rawptr, pitch: ^c.int) -> bool ---
-	LockTextureToSurface             :: proc(texture: ^Texture, rect: Maybe(^Rect), surface: ^^Surface) -> bool ---
-	UnlockTexture                    :: proc(texture: ^Texture) ---
-	SetRenderTarget                  :: proc(renderer: ^Renderer, texture: Maybe(^Texture)) -> bool ---
-	SetRenderLogicalPresentation     :: proc(renderer: ^Renderer, w, h: c.int, mode: RendererLogicalPresentation) -> bool ---
-	GetRenderLogicalPresentation     :: proc(renderer: ^Renderer, w, h: ^c.int, mode: ^RendererLogicalPresentation) -> bool ---
-	GetRenderLogicalPresentationRect :: proc(renderer: ^Renderer, rect: ^FRect) -> bool ---
-	RenderCoordinatesFromWindow      :: proc(renderer: ^Renderer, window_x, window_y: f32, x, y: ^f32) -> bool ---
-	RenderCoordinatesToWindow        :: proc(renderer: ^Renderer, x, y: f32, window_x, window_y: ^f32) -> bool ---
-	ConvertEventToRenderCoordinates  :: proc(renderer: ^Renderer, event: ^Event) -> bool ---
-	SetRenderViewport                :: proc(renderer: ^Renderer, rect: Maybe(^Rect)) -> bool ---
-	GetRenderViewport                :: proc(renderer: ^Renderer, rect: ^Rect) -> bool ---
-	GetRenderSafeArea                :: proc(renderer: ^Renderer, rect: ^Rect) -> bool ---
-	SetRenderClipRect                :: proc(renderer: ^Renderer, rect: Maybe(^Rect)) -> bool ---
-	GetRenderClipRect                :: proc(renderer: ^Renderer, rect: ^Rect) -> bool ---
-	SetRenderScale                   :: proc(renderer: ^Renderer, scaleX, scaleY: f32) -> bool ---
-	GetRenderScale                   :: proc(renderer: ^Renderer, scaleX, scaleY: ^f32) -> bool ---
-	SetRenderDrawColor               :: proc(renderer: ^Renderer, r, g, b, a: Uint8) -> bool ---
-	SetRenderDrawColorFloat          :: proc(renderer: ^Renderer, r, g, b, a: f32) -> bool ---
-	GetRenderDrawColor               :: proc(renderer: ^Renderer, r, g, b, a: ^Uint8) -> bool ---
-	GetRenderDrawColorFloat          :: proc(renderer: ^Renderer, r, g, b, a: ^f32) -> bool ---
-	SetRenderColorScale              :: proc(renderer: ^Renderer, scale: f32) -> bool ---
-	GetRenderColorScale              :: proc(renderer: ^Renderer, scale: ^f32) -> bool ---
-	SetRenderDrawBlendMode           :: proc(renderer: ^Renderer, blendMode: BlendMode) -> bool ---
-	GetRenderDrawBlendMode           :: proc(renderer: ^Renderer, blendMode: ^BlendMode) -> bool ---
-	RenderClear                      :: proc(renderer: ^Renderer) -> bool ---
-	RenderPoint                      :: proc(renderer: ^Renderer, x, y: f32) -> bool ---
-	RenderPoints                     :: proc(renderer: ^Renderer, points: [^]FPoint, count: c.int) -> bool ---
-	RenderLine                       :: proc(renderer: ^Renderer, x1, y1, x2, y2: f32) -> bool ---
-	RenderLines                      :: proc(renderer: ^Renderer, points: [^]FPoint, count: c.int) -> bool ---
-	RenderRect                       :: proc(renderer: ^Renderer, rect: Maybe(^FRect)) -> bool ---
-	RenderRects                      :: proc(renderer: ^Renderer, rects: [^]FRect, count: c.int) -> bool ---
-	RenderFillRect                   :: proc(renderer: ^Renderer, rect: Maybe(^FRect)) -> bool ---
-	RenderFillRects                  :: proc(renderer: ^Renderer, rects: [^]FRect, count: c.int) -> bool ---
-	RenderTexture                    :: proc(renderer: ^Renderer, texture: ^Texture, srcrect, dstrect: Maybe(^FRect)) -> bool ---
-	RenderTextureRotated             :: proc(renderer: ^Renderer, texture: ^Texture, srcrect, dstrect: Maybe(^FRect), angle: f64, #by_ptr center: FPoint, flip: FlipMode) -> bool ---
-	RenderTextureAffine              :: proc(renderer: ^Renderer, texture: ^Texture, srcrect: Maybe(^FRect), origin, right, down: Maybe(^FPoint)) -> bool ---
-	RenderTextureTiled               :: proc(renderer: ^Renderer, texture: ^Texture, srcrect: Maybe(^FRect), scale: f32, dstrect: Maybe(^FRect)) -> bool ---
-	RenderTexture9Grid               :: proc(renderer: ^Renderer, texture: ^Texture, srcrect: Maybe(^FRect), left_width, right_width, top_height, bottom_height: f32, scale: f32, dstrect: Maybe(^FRect)) -> bool ---
-	RenderGeometry                   :: proc(renderer: ^Renderer, texture: ^Texture, vertices: [^]Vertex, num_vertices: c.int, indices: [^]c.int, num_indices: c.int) -> bool ---
-	RenderGeometryRaw                :: proc(renderer: ^Renderer, texture: ^Texture, xy: [^]f32, xy_stride: c.int, color: [^]FColor, color_stride: c.int, uv: [^]f32, uv_stride: c.int, num_vertices: c.int, indices: rawptr, num_indices: c.int, size_indices: c.int) -> bool ---
-	RenderPresent                    :: proc(renderer: ^Renderer) -> bool ---
-	DestroyTexture                   :: proc(texture: ^Texture) ---
-	DestroyRenderer                  :: proc(renderer: ^Renderer) ---
-	FlushRenderer                    :: proc(renderer: ^Renderer) -> bool ---
-	AddVulkanRenderSemaphores        :: proc(renderer: ^Renderer, wait_stage_mask: Uint32, wait_semaphore, signal_semaphore: Sint64) -> bool ---
-	SetRenderVSync                   :: proc(renderer: ^Renderer, vsync: c.int) -> bool ---
-	GetRenderVSync                   :: proc(renderer: ^Renderer, vsync: ^c.int) -> bool ---
-	RenderDebugTextFormat            :: proc(renderer: ^Renderer, x, y: f32, fmt: cstring, #c_vararg args: ..any) -> bool ---
+proc setTextureColorMod*(texture: TexturePtr, r, g, b: uint8): bool {.importc: "SDL_SetTextureColorMod".}
+proc setTextureColorMod*(texture: TexturePtr, r, g, b: float32): bool {.importc: "SDL_SetTextureColorModFloat".}
+proc setColorMod*(texture: TexturePtr, r, g, b: uint8): bool {.discardable.} =
+  setTextureColorMod(texture, r, g, b)
+proc setColorMod*(texture: TexturePtr, r, g, b: float32): bool {.discardable.} =
+  setTextureColorMod(texture, r, g, b)
 
+proc getTextureColorMod*(texture: TexturePtr, r, g, b: ptr uint8): bool {.importc: "SDL_GetTextureColorMod".}
+proc getTextureColorMod*(texture: TexturePtr, r, g, b: ptr float32): bool {.importc: "SDL_GetTextureColorModFloat".}
+proc getColorMod*(texture: TexturePtr, r, g, b: ptr uint8): bool {.inline.} =
+  getTextureColorMod(texture, r, g, b)
+## Only specified because of ambigious overloads due to return types
+proc getColorModUint*(texture: TexturePtr): (uint8, uint8, uint8) =
+  var r, g, b: uint8
+  if getTextureColorMod(texture, addr r, addr g, addr b):
+    result = (r, g, b)
+  else:
+    echo getError()
+    result = (0, 0, 0)
+proc getColorMod*(texture: TexturePtr, r, g, b: ptr float32): bool {.inline.} =
+  getTextureColorMod(texture, r, g, b)
+proc getColorModFloat*(texture: TexturePtr): (float32, float32, float32) =
+  var r, g, b: float32
+  if getTextureColorMod(texture, addr r, addr g, addr b):
+    result = (r, g, b)
+  else:
+    echo getError()
+    result = (0.0, 0.0, 0.0)
+  
+proc setTextureAlphaMod*(texture: TexturePtr, alpha: uint8): bool {.importc: "SDL_SetTextureAlphaMod".}
+proc setTextureAlphaMod*(texture: TexturePtr, alpha: float32): bool {.importc: "SDL_SetTextureAlphaModFloat".}
+proc setAlphaMod*(texture: TexturePtr, alpha: uint8): bool {.discardable.} =
+  setTextureAlphaMod(texture, alpha)
+proc setAlphaMod*(texture: TexturePtr, alpha: float32): bool {.discardable.} =
+  setTextureAlphaMod(texture, alpha)
 
-]#
+proc getTextureAlphaMod*(texture: TexturePtr, alpha: ptr uint8): bool {.importc: "SDL_GetTextureAlphaMod".}
+proc getTextureAlphaMod*(texture: TexturePtr, alpha: ptr float32): bool {.importc: "SDL_GetTextureAlphaModFloat".}
+proc getAlphaMod*(texture: TexturePtr, alpha: ptr uint8): bool {.inline.} =
+  getTextureAlphaMod(texture, alpha)
+proc getAlphaMod*(texture: TexturePtr, alpha: ptr float32): bool {.inline.} =
+  getTextureAlphaMod(texture, alpha)
+proc getAlphaModUint*(texture: TexturePtr): uint8 =
+  var alpha: uint8
+  if getTextureAlphaMod(texture, addr alpha):
+    result = alpha
+  else:
+    echo getError()
+    result = 0
+proc getAlphaModFloat*(texture: TexturePtr): float32 =
+  var alpha: float32
+  if getTextureAlphaMod(texture, addr alpha):
+    result = alpha
+  else:
+    echo getError()
+    result = 0.0
+
+proc setTextureBlendMode*(texture: TexturePtr, blendMode: BlendMode): bool {.importc: "SDL_SetTextureBlendMode".}
+proc getTextureBlendMode*(texture: TexturePtr, blendMode: ptr BlendMode): bool {.importc: "SDL_GetTextureBlendMode".}
+proc setBlendMode*(texture: TexturePtr, blendMode: BlendMode): bool {.discardable.} =
+  setTextureBlendMode(texture, blendMode)
+proc `blendMode=`*(texture: TexturePtr, blendMode: BlendMode): bool {.inline, discardable.} =
+  setTextureBlendMode(texture, blendMode)
+proc getBlendMode*(texture: TexturePtr, blendMode: ptr BlendMode): bool {.discardable.} =
+  getTextureBlendMode(texture, blendMode)
+proc getBlendMode*(texture: TexturePtr): BlendMode =
+  var blendMode: BlendMode
+  if getTextureBlendMode(texture, addr blendMode):
+    result = blendMode
+  else:
+    echo getError()
+    result = BLENDMODE_INVALID
+proc `blendMode`*(texture: TexturePtr): BlendMode {.inline.} =
+  getBlendMode(texture)
+
+proc setTextureScaleMode*(texture: TexturePtr, scaleMode: ScaleMode): bool {.importc: "SDL_SetTextureScaleMode".}
+proc getTextureScaleMode*(texture: TexturePtr, scaleMode: ptr ScaleMode): bool {.importc: "SDL_GetTextureScaleMode".}
+proc setScaleMode*(texture: TexturePtr, scaleMode: ScaleMode): bool {.discardable.} =
+  setTextureScaleMode(texture, scaleMode)
+proc `scaleMode=`*(texture: TexturePtr, scaleMode: ScaleMode): bool {.inline, discardable.} =
+  setTextureScaleMode(texture, scaleMode)
+proc getScaleMode*(texture: TexturePtr, scaleMode: ptr ScaleMode): bool {.discardable.} =
+  getTextureScaleMode(texture, scaleMode)
+proc getScaleMode*(texture: TexturePtr): ScaleMode =
+  var scaleMode: ScaleMode
+  if getTextureScaleMode(texture, addr scaleMode):
+    result = scaleMode
+  else:
+    echo getError()
+    result = ScaleMode.Invalid
+proc `scaleMode`*(texture: TexturePtr): ScaleMode {.inline.} =
+  getScaleMode(texture)
+
+proc updateTexture*(texture: TexturePtr, rect: ptr Rect, pixels: ptr, pitch: cint): bool {.importc: "SDL_UpdateTexture".}
+proc update*(texture: TexturePtr, rect: ptr Rect, pixels: ptr, pitch: cint): bool {.inline, discardable.} =
+  updateTexture(texture, rect, pixels, pitch)
+
+proc updateYUVTexture*(texture: TexturePtr, rect: ptr Rect, yPlane: ptr uint8, yPitch: cint, uPlane: ptr uint8, uPitch: cint, vPlane: ptr uint8, vPitch: cint): bool {.importc: "SDL_UpdateYUVTexture".}
+proc update*(texture: TexturePtr, rect: ptr Rect, yPlane: ptr uint8, yPitch: cint, uPlane: ptr uint8, uPitch: cint, vPlane: ptr uint8, vPitch: cint): bool {.inline, discardable.} =
+  updateYUVTexture(texture, rect, yPlane, yPitch, uPlane, uPitch, vPlane, vPitch)
+
+proc updateNVTexture*(texture: TexturePtr, rect: ptr Rect, yPlane: ptr uint8, yPitch: cint, uvPlane: ptr uint8, uvPitch: cint): bool {.importc: "SDL_UpdateNVTexture".}
+proc update*(texture: TexturePtr, rect: ptr Rect, yPlane: ptr uint8, yPitch: cint, uvPlane: ptr uint8, uvPitch: cint): bool {.inline, discardable.} =
+  updateNVTexture(texture, rect, yPlane, yPitch, uvPlane, uvPitch)
+
+proc lockTexture*(texture: TexturePtr, rect: ptr Rect, outLockedPixels: ptr ptr, outPitch: ptr cint): bool {.importc: "SDL_LockTexture".}
+proc lock*(texture: TexturePtr, rect: ptr Rect, outLockedPixels: ptr ptr, outPitch: ptr cint): bool {.inline, discardable.} =
+  lockTexture(texture, rect, outLockedPixels, outPitch)
+
+proc lockTextureToSurface*(texture: TexturePtr, rect: ptr Rect, outSurface: ptr SurfacePtr): bool {.importc: "SDL_LockTextureToSurface".}
+proc lockToSurface*(texture: TexturePtr, rect: ptr Rect, outSurface: ptr SurfacePtr): bool {.inline, discardable.} =
+  lockTextureToSurface(texture, rect, outSurface)
+proc lock*(texture: TexturePtr, rect: ptr Rect, outLockedPixels: ptr ptr, outPitch: ptr cint, outSurface: ptr SurfacePtr): bool {.inline, discardable.} =
+  lockTextureToSurface(texture, rect, outSurface)
+
+proc unlockTexture*(texture: TexturePtr): void {.importc: "SDL_UnlockTexture".}
+proc unlock*(texture: TexturePtr): void {.inline, discardable.} =
+  unlockTexture(texture)
+
+proc setRenderTarget*(renderer: RendererPtr, texture: TexturePtr): bool {.importc: "SDL_SetRenderTarget".}
+proc setTarget*(renderer: RendererPtr, texture: TexturePtr): bool {.inline, discardable.} =
+  setRenderTarget(renderer, texture)
+
+## custom
+proc resetTarget*(renderer: RendererPtr): bool {.inline, discardable.} =
+  setRenderTarget(renderer, nil)
+
+proc setRenderLogicalPresentation*(renderer: RendererPtr, w, h: cint, mode: RendererLogicalPresentation): bool {.importc: "SDL_SetRenderLogicalPresentation".}
+proc setLogicalPresentation*(renderer: RendererPtr, w, h: cint, mode: RendererLogicalPresentation): bool {.inline, discardable.} =
+  setRenderLogicalPresentation(renderer, w, h, mode)
+
+proc getRenderLogicalPresentation*(renderer: RendererPtr, w, h: ptr cint, mode: ptr RendererLogicalPresentation): bool {.importc: "SDL_GetRenderLogicalPresentation".}
+proc getLogicalPresentation*(renderer: RendererPtr, w, h: ptr cint, mode: ptr RendererLogicalPresentation): bool {.inline.} =
+  getRenderLogicalPresentation(renderer, w, h, mode)
+proc getLogicalPresentation*(renderer: RendererPtr): (cint, cint, RendererLogicalPresentation) =
+  var w, h: cint
+  var mode: RendererLogicalPresentation
+  if getRenderLogicalPresentation(renderer, addr w, addr h, addr mode):
+    result = (w, h, mode)
+  else:
+    echo getError()
+    result = (0, 0, RendererLogicalPresentation.Disabled)
+
+proc getRenderLogicalPresentationRect*(renderer: RendererPtr, rect: ptr FRect): bool {.importc: "SDL_GetRenderLogicalPresentationRect".}
+proc getLogicalPresentationRect*(renderer: RendererPtr, rect: ptr FRect): bool {.inline.} =
+  getRenderLogicalPresentationRect(renderer, rect)
+proc getLogicalPresentationRect*(renderer: RendererPtr): FRect =
+  var rect: FRect
+  if getRenderLogicalPresentationRect(renderer, addr rect):
+    result = rect
+  else:
+    echo getError()
+    result = FRect(x: 0.0, y: 0.0, w: 0.0, h: 0.0)
+
+proc renderCoordinatesFromWindow*(renderer: RendererPtr, windowX, windowY: float32, outX, outY: ptr float32): bool {.importc: "SDL_RenderCoordinatesFromWindow".}
+proc renderCoordinatesFromWindow*(renderer: RendererPtr, windowX, windowY: float32): (float32, float32) =
+  var x, y: float32
+  if renderCoordinatesFromWindow(renderer, windowX, windowY, addr x, addr y):
+    result = (x, y)
+  else:
+    echo getError()
+    result = (0.0, 0.0)
+proc renderCoordinatesToWindow*(renderer: RendererPtr, x, y: float32, outWindowX, outWindowY: ptr float32): bool {.importc: "SDL_RenderCoordinatesToWindow".}
+proc renderCoordinatesToWindow*(renderer: RendererPtr, x, y: float32): (float32, float32) =
+  var windowX, windowY: float32
+  if renderCoordinatesToWindow(renderer, x, y, addr windowX, addr windowY):
+    result = (windowX, windowY)
+  else:
+    echo getError()
+    result = (0.0, 0.0)
+
+proc convertEventToRenderCoordinates*(renderer: RendererPtr, event: EventPtr): bool {.importc: "SDL_ConvertEventToRenderCoordinates".}
+proc convertEventToRenderCoordinates*(renderer: RendererPtr, event: var Event): bool {.inline.} =
+  convertEventToRenderCoordinates(renderer, addr event)
+
+proc setRenderViewport*(renderer: RendererPtr, rect: ptr Rect): bool {.importc: "SDL_SetRenderViewport".}
+proc setRenderViewport*(renderer: RendererPtr, rect: var Rect): bool {.inline.} =
+  setRenderViewport(renderer, addr rect)
+proc setViewport*(renderer: RendererPtr, rect: ptr Rect): bool {.inline, discardable.} =
+  setRenderViewport(renderer, rect)
+proc setViewport*(renderer: RendererPtr, rect: var Rect): bool {.inline, discardable.} =
+  setRenderViewport(renderer, addr rect)
+proc `renderViewport=`*(renderer: RendererPtr, rect: ptr Rect): bool {.inline, discardable.} =
+  setRenderViewport(renderer, rect)
+proc `renderViewport=`*(renderer: RendererPtr, rect: var Rect): bool {.inline, discardable.} =
+  setRenderViewport(renderer, addr rect)
+
+## custom
+proc resetRenderViewport*(renderer: RendererPtr): bool {.inline.} =
+  setRenderViewport(renderer, nil)
+proc resetViewport*(renderer: RendererPtr): bool {.inline, discardable.} =
+  resetRenderViewport(renderer)
+
+proc getRenderViewport*(renderer: RendererPtr, rect: ptr Rect): bool {.importc: "SDL_GetRenderViewport".}
+proc getRenderViewport*(renderer: RendererPtr, rect: var Rect): bool {.inline.} =
+  getRenderViewport(renderer, addr rect)
+proc getViewport*(renderer: RendererPtr, rect: ptr Rect): bool {.inline, discardable.} =
+  getRenderViewport(renderer, rect)
+proc getViewport*(renderer: RendererPtr, rect: var Rect): bool {.inline, discardable.} =
+  getRenderViewport(renderer, addr rect)
+proc getViewport*(renderer: RendererPtr): Rect =
+  var rect: Rect
+  if getRenderViewport(renderer, addr rect):
+    result = rect
+  else:
+    echo getError()
+    result = Rect(x: 0, y: 0, w: 0, h: 0)
+proc `viewport`*(renderer: RendererPtr): Rect {.inline.} =
+  getViewport(renderer)
+
+proc getRenderSafeArea*(renderer: RendererPtr, rect: ptr Rect): bool {.importc: "SDL_GetRenderSafeArea".}
+proc getRenderSafeArea*(renderer: RendererPtr, rect: var Rect): bool {.inline.} =
+  getRenderSafeArea(renderer, addr rect)
+proc getSafeArea*(renderer: RendererPtr, rect: ptr Rect): bool {.inline, discardable.} =
+  getRenderSafeArea(renderer, rect)
+proc getSafeArea*(renderer: RendererPtr, rect: var Rect): bool {.inline, discardable.} =
+  getRenderSafeArea(renderer, addr rect)
+proc getSafeArea*(renderer: RendererPtr): Rect =
+  var rect: Rect
+  if getRenderSafeArea(renderer, addr rect):
+    result = rect
+  else:
+    echo getError()
+    result = Rect(x: 0, y: 0, w: 0, h: 0)
+proc `safeArea`*(renderer: RendererPtr): Rect {.inline.} =
+  getSafeArea(renderer)
+
+proc setRenderClipRect*(renderer: RendererPtr, rect: ptr Rect): bool {.importc: "SDL_SetRenderClipRect".}
+proc setRenderClipRect*(renderer: RendererPtr, rect: var Rect): bool {.inline.} =
+  setRenderClipRect(renderer, addr rect)
+proc setClipRect*(renderer: RendererPtr, rect: ptr Rect): bool {.inline, discardable.} =
+  setRenderClipRect(renderer, rect)
+proc setClipRect*(renderer: RendererPtr, rect: var Rect): bool {.inline, discardable.} =
+  setRenderClipRect(renderer, addr rect)
+proc `clipRect=`*(renderer: RendererPtr, rect: ptr Rect): bool {.inline, discardable.} =
+  setRenderClipRect(renderer, rect)
+proc `clipRect=`*(renderer: RendererPtr, rect: var Rect): bool {.inline, discardable.} =
+  setRenderClipRect(renderer, addr rect)
+
+## custom
+proc resetRenderClipRect*(renderer: RendererPtr): bool {.inline, discardable.} =
+  setRenderClipRect(renderer, nil)
+proc resetClipRect*(renderer: RendererPtr): bool {.inline, discardable.} =
+  resetRenderClipRect(renderer)
+
+proc getRenderClipRect*(renderer: RendererPtr, rect: ptr Rect): bool {.importc: "SDL_GetRenderClipRect".}
+proc getRenderClipRect*(renderer: RendererPtr, rect: var Rect): bool {.inline.} =
+  getRenderClipRect(renderer, addr rect)
+proc getClipRect*(renderer: RendererPtr, rect: ptr Rect): bool {.inline, discardable.} =
+  getRenderClipRect(renderer, rect)
+proc getClipRect*(renderer: RendererPtr, rect: var Rect): bool {.inline, discardable.} =
+  getRenderClipRect(renderer, addr rect)
+proc getClipRect*(renderer: RendererPtr): Rect =
+  var rect: Rect
+  if getRenderClipRect(renderer, addr rect):
+    result = rect
+  else:
+    echo getError()
+    result = Rect(x: 0, y: 0, w: 0, h: 0)
+proc `clipRect`*(renderer: RendererPtr): Rect {.inline.} =
+  getClipRect(renderer)
+
+proc setRenderScale*(renderer: RendererPtr, scaleX, scaleY: float32): bool {.importc: "SDL_SetRenderScale".}
+proc setScale*(renderer: RendererPtr, scaleX, scaleY: float32): bool {.inline, discardable.} =
+  setRenderScale(renderer, scaleX, scaleY)
+
+proc getRenderScale*(renderer: RendererPtr, scaleX, scaleY: ptr float32): bool {.importc: "SDL_GetRenderScale".}
+proc getRenderScale*(renderer: RendererPtr, scaleX, scaleY: var float32): bool {.inline.} =
+  getRenderScale(renderer, addr scaleX, addr scaleY)
+proc getScale*(renderer: RendererPtr, scaleX, scaleY: ptr float32): bool {.inline, discardable.} =
+  getRenderScale(renderer, scaleX, scaleY)
+proc getScale*(renderer: RendererPtr, scaleX, scaleY: var float32): bool {.inline, discardable.} =
+  getRenderScale(renderer, addr scaleX, addr scaleY)
+proc getScale*(renderer: RendererPtr): (float32, float32) =
+  var scaleX, scaleY: float32
+  if getRenderScale(renderer, addr scaleX, addr scaleY):
+    result = (scaleX, scaleY)
+  else:
+    echo getError()
+    result = (1.0, 1.0)
+proc `scale`*(renderer: RendererPtr): (float32, float32) {.inline.} =
+  getScale(renderer)
+
+proc setRenderDrawColor*(renderer: RendererPtr, r, g, b, a: uint8): bool {.importc: "SDL_SetRenderDrawColor".}
+proc setRenderDrawColor*(renderer: RendererPtr, r, g, b: uint8): bool {.inline.} =
+  setRenderDrawColor(renderer, r, g, b, 255)
+proc setRenderDrawColor*(renderer: RendererPtr, r, g, b, a: float32): bool {.importc: "SDL_SetRenderDrawColorFloat".}
+proc setRenderDrawColor*(renderer: RendererPtr, r, g, b: float32): bool {.inline.} =
+  setRenderDrawColor(renderer, r, g, b, 1.0)
+
+proc setDrawColor*(renderer: RendererPtr, r, g, b, a: uint8): bool {.discardable.} =
+  setRenderDrawColor(renderer, r, g, b, a)
+proc setDrawColor*(renderer: RendererPtr, r, g, b, a: float32): bool {.discardable.} =
+  setRenderDrawColor(renderer, r, g, b, a)
+proc setDrawColor*(renderer: RendererPtr, r, g, b: uint8): bool {.discardable.} =
+  setDrawColor(renderer, r, g, b, 255)
+proc setDrawColor*(renderer: RendererPtr, r, g, b: float32): bool {.discardable.} =
+  setDrawColor(renderer, r, g, b, 1.0)
+
+proc getRenderDrawColor*(renderer: RendererPtr, r, g, b, a: ptr uint8): bool {.importc: "SDL_GetRenderDrawColor".}
+proc getRenderDrawColor*(renderer: RendererPtr, r, g, b, a: var uint8): bool {.inline.} =
+  getRenderDrawColor(renderer, addr r, addr g, addr b, addr a)
+proc getRenderDrawColor*(renderer: RendererPtr, r, g, b, a: ptr float32): bool {.importc: "SDL_GetRenderDrawColorFloat".}
+proc getRenderDrawColor*(renderer: RendererPtr, r, g, b, a: var float32): bool {.inline.} =
+  getRenderDrawColor(renderer, addr r, addr g, addr b, addr a)
+
+proc getDrawColor*(renderer: RendererPtr, r, g, b, a: ptr uint8): bool {.inline.} =
+  getRenderDrawColor(renderer, r, g, b, a)
+proc getDrawColor*(renderer: RendererPtr, r, g, b, a: var uint8): bool {.inline.} =
+  getRenderDrawColor(renderer, addr r, addr g, addr b, addr a)
+proc getDrawColor*(renderer: RendererPtr, r, g, b, a: ptr float32): bool {.inline.} =
+  getRenderDrawColor(renderer, r, g, b, a)
+proc getDrawColor*(renderer: RendererPtr, r, g, b, a: var float32): bool {.inline.} =
+  getRenderDrawColor(renderer, addr r, addr g, addr b, addr a)
+
+proc getDrawColorUint*(renderer: RendererPtr): (uint8, uint8, uint8, uint8) =
+  var r, g, b, a: uint8
+  if getRenderDrawColor(renderer, addr r, addr g, addr b, addr a):
+    result = (r, g, b, a)
+  else:
+    echo getError()
+    result = (0, 0, 0, 0)
+proc getDrawColorFloat*(renderer: RendererPtr): (float32, float32, float32, float32) =
+  var r, g, b, a: float32
+  if getRenderDrawColor(renderer, addr r, addr g, addr b, addr a):
+    result = (r, g, b, a)
+  else:
+    echo getError()
+    result = (0.0, 0.0, 0.0, 0.0)
+
+proc setRenderColorScale*(renderer: RendererPtr, scale: float32): bool {.importc: "SDL_SetRenderColorScale".}
+proc setColorScale*(renderer: RendererPtr, scale: float32): bool {.inline, discardable.} =
+  setRenderColorScale(renderer, scale)
+proc `colorScale=`*(renderer: RendererPtr, scale: float32): bool {.inline, discardable.} =
+  setRenderColorScale(renderer, scale)
+
+proc getRenderColorScale*(renderer: RendererPtr, scale: ptr float32): bool {.importc: "SDL_GetRenderColorScale".}
+proc getRenderColorScale*(renderer: RendererPtr, scale: var float32): bool {.inline.} =
+  getRenderColorScale(renderer, addr scale)
+proc getColorScale*(renderer: RendererPtr, scale: ptr float32): bool {.inline, discardable.} =
+  getRenderColorScale(renderer, scale)
+proc getColorScale*(renderer: RendererPtr, scale: var float32): bool {.inline, discardable.} =
+  getRenderColorScale(renderer, addr scale)
+proc getColorScale*(renderer: RendererPtr): float32 =
+  var scale: float32
+  if getRenderColorScale(renderer, addr scale):
+    result = scale
+  else:
+    echo getError()
+    result = 0.0
+proc `colorScale`*(renderer: RendererPtr): float32 {.inline.} =
+  getColorScale(renderer)
+
+proc setRenderDrawBlendMode*(renderer: RendererPtr, blendMode: BlendMode): bool {.importc: "SDL_SetRenderDrawBlendMode".}
+proc setDrawBlendMode*(renderer: RendererPtr, blendMode: BlendMode): bool {.discardable.} =
+  setRenderDrawBlendMode(renderer, blendMode)
+proc `drawBlendMode=`*(renderer: RendererPtr, blendMode: BlendMode): bool {.inline, discardable.} =
+  setRenderDrawBlendMode(renderer, blendMode)
+
+proc getRenderDrawBlendMode*(renderer: RendererPtr, blendMode: ptr BlendMode): bool {.importc: "SDL_GetRenderDrawBlendMode".}
+proc getRenderDrawBlendMode*(renderer: RendererPtr, blendMode: var BlendMode): bool {.inline.} =
+  getRenderDrawBlendMode(renderer, addr blendMode)
+proc getDrawBlendMode*(renderer: RendererPtr, blendMode: ptr BlendMode): bool {.inline, discardable.} =
+  getRenderDrawBlendMode(renderer, blendMode)
+proc getDrawBlendMode*(renderer: RendererPtr, blendMode: var BlendMode): bool {.inline, discardable.} =
+  getRenderDrawBlendMode(renderer, addr blendMode)
+proc getDrawBlendMode*(renderer: RendererPtr): BlendMode =
+  var blendMode: BlendMode
+  if getRenderDrawBlendMode(renderer, addr blendMode):
+    result = blendMode
+  else:
+    echo getError()
+    result = BLENDMODE_INVALID
+proc `drawBlendMode`*(renderer: RendererPtr): BlendMode {.inline.} =
+  getDrawBlendMode(renderer)
 
 proc renderClear*(renderer: RendererPtr): bool {.importc: "SDL_RenderClear".}
 proc clear*(renderer: RendererPtr): bool {.inline, discardable.} =
   renderClear(renderer)
+
+proc renderPoint*(renderer: RendererPtr, x, y: float32): bool {.importc: "SDL_RenderDrawPoint".}
+proc renderPoints*(renderer: RendererPtr, points: UncheckedArray[FPoint], count: cint): bool {.importc: "SDL_RenderDrawPoints".}
+proc renderPoints*(renderer: RendererPtr, points: openArray[FPoint]): bool {.discardable.} =
+  renderPoints(renderer, cast[UncheckedArray[FPoint]](points), points.len.cint)
+
+proc renderLine*(renderer: RendererPtr, x1, y1, x2, y2: float32): bool {.importc: "SDL_RenderDrawLine".}
+proc renderLines*(renderer: RendererPtr, points: UncheckedArray[FPoint], count: cint): bool {.importc: "SDL_RenderDrawLines".}
+proc renderLines*(renderer: RendererPtr, points: openArray[FPoint]): bool {.discardable.} =
+  renderLines(renderer, cast[UncheckedArray[FPoint]](points), points.len.cint)
+
+proc renderRect*(renderer: RendererPtr, rect: ptr Rect): bool {.importc: "SDL_RenderDrawRect".}
+proc renderRect*(renderer: RendererPtr, rect: Rect): bool {.inline, discardable.} =
+  renderRect(renderer, addr rect)
+
+proc renderRects*(renderer: RendererPtr, rects: UncheckedArray[Rect], count: cint): bool {.importc: "SDL_RenderDrawRects".}
+proc renderRects*(renderer: RendererPtr, rects: openArray[Rect]): bool {.discardable.} =
+  renderRects(renderer, cast[UncheckedArray[Rect]](rects), rects.len.cint)
+
+proc renderFillRect*(renderer: RendererPtr, rect: ptr Rect): bool {.importc: "SDL_RenderFillRect".}
+proc renderFillRect*(renderer: RendererPtr, rect: Rect): bool {.inline, discardable.} =
+  renderFillRect(renderer, addr rect)
+
+proc renderFillRects*(renderer: RendererPtr, rects: UncheckedArray[Rect], count: cint): bool {.importc: "SDL_RenderFillRects".}
+proc renderFillRects*(renderer: RendererPtr, rects: openArray[Rect]): bool {.discardable.} =
+  renderFillRects(renderer, cast[UncheckedArray[Rect]](rects), rects.len.cint)
+
+proc renderTexture*(renderer: RendererPtr, texture: TexturePtr, srcRect: ptr Rect, dstRect: ptr Rect): bool {.importc: "SDL_RenderTexture".}
+proc renderTexture*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, dstRect: Rect): bool {.inline, discardable.} =
+  renderTexture(renderer, texture, addr srcRect, addr dstRect)
+
+proc renderTextureRotated*(renderer: RendererPtr, texture: TexturePtr, srcRect: ptr Rect, dstRect: ptr Rect, angle: float64, center: ptr FPoint, flip: FlipMode): bool {.importc: "SDL_RenderTextureRotated".}
+proc renderTextureRotated*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, dstRect: Rect, angle: float64, center: FPoint, flip: FlipMode): bool {.inline, discardable.} =
+  renderTextureRotated(renderer, texture, addr srcRect, addr dstRect, angle, addr center, flip)
+proc renderTexture*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, dstRect: Rect, angle: float64, center: FPoint, flip: FlipMode): bool {.inline, discardable.} =
+  renderTextureRotated(renderer, texture, addr srcRect, addr dstRect, angle, addr center, flip)
+
+proc renderTextureAffine*(renderer: RendererPtr, texture: TexturePtr, srcRect: ptr Rect, origin, right, down: ptr FPoint): bool {.importc: "SDL_RenderTextureAffine".}
+proc renderTextureAffine*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, origin, right, down: FPoint): bool {.inline, discardable.} =
+  renderTextureAffine(renderer, texture, addr srcRect, addr origin, addr right, addr down)
+proc renderTexture*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, origin, right, down: FPoint): bool {.inline, discardable.} =
+  renderTextureAffine(renderer, texture, addr srcRect, addr origin, addr right, addr down)
+
+proc renderTextureTiled*(renderer: RendererPtr, texture: TexturePtr, srcRect: ptr Rect, scale: float32, dstRect: ptr Rect): bool {.importc: "SDL_RenderTextureTiled".}
+proc renderTextureTiled*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, scale: float32, dstRect: Rect): bool {.inline, discardable.} =
+  renderTextureTiled(renderer, texture, addr srcRect, scale, addr dstRect)
+proc renderTexture*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, scale: float32, dstRect: Rect): bool {.inline, discardable.} =
+  renderTextureTiled(renderer, texture, addr srcRect, scale, addr dstRect)
+
+proc renderTexture9Grid*(renderer: RendererPtr, texture: TexturePtr, srcRect: ptr Rect, leftWidth, rightWidth, topHeight, bottomHeight, scale: float32, dstRect: ptr Rect): bool {.importc: "SDL_RenderTexture9Grid".}
+proc renderTexture9Grid*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, leftWidth, rightWidth, topHeight, bottomHeight, scale: float32, dstRect: Rect): bool {.inline, discardable.} =
+  renderTexture9Grid(renderer, texture, addr srcRect, leftWidth, rightWidth, topHeight, bottomHeight, scale, addr dstRect)
+proc renderTexture*(renderer: RendererPtr, texture: TexturePtr, srcRect: Rect, leftWidth, rightWidth, topHeight, bottomHeight, scale: float32, dstRect: Rect): bool {.inline, discardable.} =
+  renderTexture9Grid(renderer, texture, addr srcRect, leftWidth, rightWidth, topHeight, bottomHeight, scale, addr dstRect)
+
+proc renderGeometry*(renderer: RendererPtr, texture: TexturePtr, vertices: UncheckedArray[Vertex], numVertices: cint, indices: ptr UncheckedArray[cint], numIndices: cint): bool {.importc: "SDL_RenderGeometry".}
+proc renderGeometry*(renderer: RendererPtr, texture: TexturePtr, vertices: openArray[Vertex], indices: openArray[cint]): bool {.inline, discardable.} =
+  renderGeometry(renderer, texture, cast[UncheckedArray[Vertex]](vertices), vertices.len.cint, cast[ptr UncheckedArray[cint]](indices), indices.len.cint)
+
+proc renderGeometryRaw*(renderer: RendererPtr, texture: TexturePtr, xy: UncheckedArray[float32], xyStride: cint, color: UncheckedArray[FColor], colorStride: cint, uv: UncheckedArray[float32], uvStride: cint, numVertices: cint, indices: UncheckedArray[cint], numIndices: cint, sizeIndices: cint): bool {.importc: "SDL_RenderGeometryRaw".}
+proc renderGeometryRaw*(renderer: RendererPtr, texture: TexturePtr, xy: openArray[float32], xyStride: cint, color: openArray[FColor], colorStride: cint, uv: openArray[float32], uvStride: cint, numVertices: cint, indices: openArray[cint], numIndices: cint, sizeIndices: cint): bool {.inline, discardable.} =
+  # Ugly!
+  var xyArr: ptr UncheckedArray[float32] = if xy.len > 0: cast[ptr UncheckedArray[float32]](xy) else: nil
+  var colorArr: ptr UncheckedArray[FColor] = if color.len > 0: cast[ptr UncheckedArray[FColor]](color) else: nil
+  var uvArr: ptr UncheckedArray[float32] = if uv.len > 0: cast[ptr UncheckedArray[float32]](uv) else: nil
+  var indicesArr: ptr UncheckedArray[cint] = if indices.len > 0: cast[ptr UncheckedArray[cint]](indices) else: nil
+  renderGeometryRaw(renderer, texture, xyArr[], xyStride, colorArr[], colorStride, uvArr[], uvStride, numVertices, indicesArr[], numIndices, sizeIndices)
+
+proc renderGeometryRaw*(renderer: RendererPtr, texture: TexturePtr, xy: openArray[float32], color: openArray[FColor], uv: openArray[float32], uvStride: cint, numVertices: cint, indices: openArray[cint], numIndices: cint, sizeIndices: cint): bool {.inline, discardable.} =
+  renderGeometryRaw(renderer, texture, xy, float32.sizeof * 2, color, FColor.sizeof.cint, uv, uvStride, numVertices, indices, numIndices, sizeIndices)
+
 proc renderPresent*(renderer: RendererPtr): bool {.importc: "SDL_RenderPresent".}
 proc present*(renderer: RendererPtr): bool {.inline, discardable.} =
   renderPresent(renderer)
+
+proc destroyTexture*(texture: TexturePtr): void {.importc: "SDL_DestroyTexture".}
+# I *think* this is how it works? The documentation is sorta vague, like all things with Nim, so IDRK...
+proc `=destroy`(texture: Texture) =
+  if (addr texture) != nil:
+    destroyTexture(addr texture)
+
+proc destroyRenderer*(renderer: RendererPtr): void {.importc: "SDL_DestroyRenderer".}
+proc `=destroy`(renderer: Renderer) =
+  if (addr renderer) != nil:
+    destroyRenderer(addr renderer)
+
 proc renderFlush*(renderer: RendererPtr): bool {.importc: "SDL_FlushRenderer".}
 proc flush*(renderer: RendererPtr): bool {.inline, discardable.} =
   renderFlush(renderer)
 
-proc setRenderDrawColor*(renderer: RendererPtr, r, g, b, a: uint8): bool {.importc: "SDL_SetRenderDrawColor".}
-proc setRenderDrawColor*(renderer: RendererPtr, r, g, b: uint8): bool {.inline.} =
-  setRenderDrawColor(renderer, r, g, b, 255'u8)
-proc setDrawColor*(renderer: RendererPtr, r, g, b, a: uint8): bool {.discardable.} =
-  setRenderDrawColor(renderer, r, g, b, a)
-proc setDrawColor*(renderer: RendererPtr, r, g, b: uint8): bool {.discardable.} =
-  setDrawColor(renderer, r, g, b, 255'u8)
+proc addVulkanRenderSemaphores*(renderer: RendererPtr, waitStageMask: uint32, waitSemaphore, signalSemaphore: int64): bool {.importc: "SDL_AddVulkanRenderSemaphores".}
+
+proc setRenderVSync*(renderer: RendererPtr, vsync: cint): bool {.importc: "SDL_SetRenderVSync".}
+proc setVSync*(renderer: RendererPtr, vsync: cint): bool {.inline, discardable.} =
+  setRenderVSync(renderer, vsync)
+proc setVsync*(renderer: RendererPtr, vsync: bool): bool {.inline, discardable.} =
+  setRenderVSync(renderer, cint(vsync))
+proc `vsync=`*(renderer: RendererPtr, vsync: bool): bool {.inline, discardable.} =
+  setRenderVSync(renderer, cint(vsync))
+
+proc getRenderVSync*(renderer: RendererPtr, vsync: ptr cint): bool {.importc: "SDL_GetRenderVSync".}
+proc getVSync*(renderer: RendererPtr, vsync: ptr cint): bool {.inline.} =
+  getRenderVSync(renderer, vsync)
+proc getVsync*(renderer: RendererPtr): bool =
+  var vsync: cint
+  if getRenderVSync(renderer, addr vsync):
+    result = vsync != 0
+  else:
+    echo getError()
+    result = false
+proc `vsync`*(renderer: RendererPtr): bool {.inline.} =
+  getVsync(renderer)
 
 proc renderDebugText*(renderer: RendererPtr, x, y: float32, str: cstring): bool {.importc: "SDL_RenderDebugText".}
 proc debugText*(renderer: RendererPtr, x, y: float32, str: cstring): bool {.inline, discardable.} =
   renderDebugText(renderer, x, y, str)
+
+proc renderDebugTextFormat*(renderer: RendererPtr, x, y: float32, fmt: cstring): bool {.importc: "SDL_RenderDebugTextFormat", varargs.}
+## unfortunate that I have to do this... but c varargs SUCK!
+proc debugTextFormat*(renderer: RendererPtr, x, y: float32, fmt: cstring): bool {.inline, discardable, varargs, importc: "SDL_RenderDebugTextFormat".} 
 
 ## Section: SDL_init.h
 

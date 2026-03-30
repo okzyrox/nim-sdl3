@@ -10,8 +10,7 @@ Sections:
 [x] SDL_pixels
 [x] SDL_clipboard
 [x] SDL_cpuinfo
-[/] SDL_error
-    - Need to figure out varargs/va_list for setError and setErrorV
+[x] SDL_error
 [x] SDL_filesystem
 [x] SDL_rect
 [x] SDL_surface
@@ -43,13 +42,13 @@ Sections:
 [0] SDL_system
 [0] SDL_thread
 [0] SDL_time
-[0] SDL_timer
+[x] SDL_timer
 [0] SDL_tray
 [0] SDL_touch
 [x] SDL_dialog
 [x] SDL_camera
 [/] SDL_events
-[/] SDL_render
+[x] SDL_render
 [/] SDL_init
 
 [0] documentation

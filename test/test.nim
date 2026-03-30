@@ -1,5 +1,31 @@
 import ../src/nim_sdl3
 
+proc drawTriangle(renderer: RendererPtr): void =
+  var xy: seq[float32] = @[
+    400, 100,
+    200, 500,
+    600, 500
+  ]
+
+  var colors: seq[FColor] = @[
+    FColor(r: 1, g: 0, b: 0, a: 1),
+    FColor(r: 0, g: 1, b: 0, a: 1),
+    FColor(r: 0, g: 0, b: 1, a: 1)
+  ]
+
+  renderer.renderGeometryRaw(
+    nil,
+    xy,
+    float32.sizeof * 4, # Technically "should" be * 2, but it looks cool like this
+    colors,
+    FColor.sizeof.cint,
+    @[],
+    0,
+    3, # vertices
+    @[],
+    0,
+    0
+  )
 
 proc main() =
   if initSDL(Video, Events):
@@ -7,7 +33,7 @@ proc main() =
   else:
     echo "Failed to initialise SDL: ", getError()
 
-  let (window, renderer) = createWindowAndRenderer("Test", 400, 400, OpenGl)
+  let (window, renderer) = createWindowAndRenderer("Test", 640, 480, OpenGl)
   if window.isNil:
     echo "Failed to create window"
     quitSDL()
@@ -18,20 +44,6 @@ proc main() =
     echo "Window and Renderer created successfully!"
 
   echo "Renderer: " & $renderer.getName()
-
-  var surface: SurfacePtr = nil
-
-  var
-    pixels1: uint8
-    pixels2: uint8
-    pixels3: uint8
-    pixels4: uint8
-
-  discard readSurfacePixel(surface, 0, 0, addr pixels1, addr pixels2, addr pixels3, addr pixels4)
-
-  surface.readPixel(0, 0, addr pixels1, addr pixels2, addr pixels3, addr pixels4)
-
-  (pixels1, pixels2, pixels3, pixels4) = surface.readPixel(0, 0)
 
   var evt: Event
   var quit = false
@@ -45,7 +57,23 @@ proc main() =
     renderer.clear()
 
     renderer.setDrawColor(255, 255, 255, 255)
+
+    renderer.drawTriangle()
+
     renderer.debugText(10, 10, "Hello SDL3 from Nim!")
+    renderer.debugTextFormat(10, 30, "Current time: %llu seconds", getTicks() div 1000)
+
+    renderer.setDrawColor(255, 255, 255)
+    renderer.debugText(224, 150, "This is some debug text.")
+
+    renderer.setDrawColor(51, 102, 255)
+    renderer.debugText(184, 200, "You can do it in different colors.")
+    renderer.setDrawColor(255, 255, 255)
+
+    renderer.setScale(4, 4)
+    renderer.debugText(14, 65, "It can be scaled.")
+    renderer.setScale(1, 1)
+    renderer.debugText(64, 350, "This only does ASCII chars. So this laughing emoji won't draw: 🤣")
 
     renderer.present()
   quitSDL()
