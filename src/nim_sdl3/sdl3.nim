@@ -1913,6 +1913,26 @@ proc showSystemMenu*(window: WindowPtr, x, y: cint): bool {.discardable.} =
 
 ## Section: SDL_guid.h
 
+type
+  Guid* {.bycopy.} = object
+    data*: array[16, uint8]
+
+proc guidToString*(guid: Guid, pszGUID: ptr cstring, cbGUID: cint): bool {.importc: "SDL_GUIDToString".}
+proc toString*(guid: Guid, pszGUID: ptr cstring, cbGUID: cint): bool {.discardable.} =
+  guidToString(guid, pszGUID, cbGUID)
+proc toString*(guid: Guid, pszGUID: var cstring, cbGUID: cint): bool {.discardable.} =
+  guidToString(guid, addr pszGUID, cbGUID)
+proc toString*(guid: Guid): cstring =
+  var str: cstring
+  if guidToString(guid, addr str, 33):
+    return str
+  else:
+    echo getError()
+    return ""
+  
+proc stringToGuid*(pchGUID: cstring): Guid {.importc: "SDL_StringToGUID".}
+proc toGuid*(pchGUID: cstring): Guid {.discardable.} =
+  stringToGuid(pchGUID)
 
 ## Section: SDL_hidapi.h
 
@@ -2257,6 +2277,25 @@ proc keycode*(scancode: Scancode): Keycode {.inline.} =
 
 ## Section: SDL_locale.h
 
+type
+  Locale* {.bycopy.} = object
+    language*: cstring
+    country*: cstring
+  
+proc getPreferredLocales*(outCount: ptr cint): ptr UncheckedArray[ptr Locale] {.importc: "SDL_GetPreferredLocales".}
+proc getPreferredLocales*(outCount: var cint): ptr UncheckedArray[ptr Locale] {.discardable.} =
+  getPreferredLocales(addr outCount)
+proc getPreferredLocales*(): seq[Locale] =
+  var count: cint
+  var locales = getPreferredLocales(addr count)
+  if locales != nil:
+    result = newSeq[Locale](count)
+    for i in 0 ..< count:
+      result[i] = locales[i][]
+  else:
+    echo getError()
+    result = @[]
+
 
 ## Section: SDL_log.h
 
@@ -2272,6 +2311,7 @@ proc keycode*(scancode: Scancode): Keycode {.inline.} =
 
 ## Section: SDL_misc.h
 
+proc openURL*(url: cstring): bool {.importc: "SDL_OpenURL".}
 
 ## Section: SDL_mouse.h
 
@@ -2284,6 +2324,7 @@ proc keycode*(scancode: Scancode): Keycode {.inline.} =
 
 ## Section: SDL_platform.h
 
+proc getPlatform*(): cstring {.importc: "SDL_GetPlatform".}
 
 ## Section: SDL_process.h
 
@@ -2299,6 +2340,104 @@ proc keycode*(scancode: Scancode): Keycode {.inline.} =
 
 ## Section: SDL_time.h
 
+type
+  Time* = distinct int64
+  DateFormat* {.size: sizeof(cint).} = enum
+    YearMonthDay = 0 ## YYYYMMDD
+    DayMonthYear ## DDMMYYYY
+    MonthDayYear ## MMDDYYYY
+
+  TimeFormat* {.size: sizeof(cint).} = enum
+    Hour24 = 0 ## 24 hour time
+    Hour12 ## 12 hour time
+
+  DateTime* {.bycopy.} = object
+    year: cint
+    month: cint
+    day: cint
+    hour: cint
+    minute: cint
+    second: cint
+    nanosecond: cint
+    dayOfWeek: cint
+    utcOffset: cint
+
+proc getDateTimeLocalePreferences*(outDateFormat: ptr DateFormat, outTimeFormat: ptr TimeFormat): bool {.importc: "SDL_GetDateTimeLocalePreferences".}
+proc getDateTimeLocalePreferences*(outDateFormat: var DateFormat, outTimeFormat: var TimeFormat): bool {.discardable.} =
+  getDateTimeLocalePreferences(addr outDateFormat, addr outTimeFormat)
+proc getDateTimeLocalePreferences*(): (DateFormat, TimeFormat) =
+  var dateFormat: DateFormat
+  var timeFormat: TimeFormat
+  if getDateTimeLocalePreferences(addr dateFormat, addr timeFormat):
+    return (dateFormat, timeFormat)
+  else:
+    echo getError()
+    return (DateFormat.YearMonthDay, TimeFormat.Hour24)
+
+proc getCurrentTime*(ticks: ptr Time): bool {.importc: "SDL_GetCurrentTime".}
+proc getCurrentTime*(ticks: var Time): bool {.discardable.} =
+  getCurrentTime(addr ticks)
+proc getCurrentTime*(): Time =
+  var ticks: Time
+  if getCurrentTime(addr ticks):
+    return ticks
+  else:
+    echo getError()
+    return Time(0)
+
+proc timeToDateTime*(ticks: Time, dt: ptr DateTime, localTime: bool): bool {.importc: "SDL_TimeToDateTime".}
+proc timeToDateTime*(ticks: Time, dt: var DateTime, localTime: bool): bool {.discardable.} =
+  timeToDateTime(ticks, addr dt, localTime)
+proc timeToDateTime*(ticks: Time, localTime: bool): DateTime =
+  var dt: DateTime
+  if timeToDateTime(ticks, addr dt, localTime):
+    return dt
+  else:
+    echo getError()
+    return DateTime(year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0, nanosecond: 0, dayOfWeek: 0, utcOffset: 0)
+
+proc toDateTime*(ticks: Time, localTime: bool): DateTime =
+  timeToDateTime(ticks, localTime)
+
+proc dateTimeToTime*(dt: ptr DateTime, ticks: ptr Time): bool {.importc: "SDL_DateTimeToTime".}
+proc dateTimeToTime*(dt: var DateTime, ticks: var Time): bool {.discardable.} =
+  dateTimeToTime(addr dt, addr ticks)
+proc dateTimeToTime*(dt: DateTime, ticks: ptr Time): bool {.discardable.} =
+  dateTimeToTime(addr dt, ticks)
+proc dateTimeToTime*(dt: DateTime, ticks: var Time): bool {.discardable.} =
+  dateTimeToTime(addr dt, addr ticks)
+proc dateTimeToTime*(dt: DateTime): Time =
+  var ticks: Time
+  if dateTimeToTime(addr dt, addr ticks):
+    return ticks
+  else:
+    echo getError()
+    return Time(0)
+
+proc toTime*(dt: DateTime): Time =
+  dateTimeToTime(dt)
+
+proc timeToWindows*(ticks: Time, dwLowDateTime, dwHighDateTime: ptr uint32): bool {.importc: "SDL_TimeToWindows".}
+proc timeToWindows*(ticks: Time, dwLowDateTime, dwHighDateTime: var uint32): bool {.discardable.} =
+  timeToWindows(ticks, addr dwLowDateTime, addr dwHighDateTime)
+proc timeToWindows*(ticks: Time): (uint32, uint32) =
+  var dwLowDateTime, dwHighDateTime: uint32
+  if timeToWindows(ticks, addr dwLowDateTime, addr dwHighDateTime):
+    return (dwLowDateTime, dwHighDateTime)
+  else:
+    echo getError()
+    return (0, 0)
+
+proc toWindows*(ticks: Time): (uint32, uint32) =
+  timeToWindows(ticks)
+
+proc timeFromWindows*(dwLowDateTime, dwHighDateTime: uint32): Time {.importc: "SDL_TimeFromWindows".}
+proc fromWindows*(dwLowDateTime, dwHighDateTime: uint32): Time {.discardable.} =
+  timeFromWindows(dwLowDateTime, dwHighDateTime)
+
+proc getDaysInMonth*(year, month: cint): cint {.importc: "SDL_GetDaysInMonth".}
+proc getDayOfYear*(year, month, day: cint): cint {.importc: "SDL_GetDayOfYear".}
+proc getDayOfWeek*(year, month, day: cint): cint {.importc: "SDL_GetDayOfWeek".}
 
 ## Section: SDL_timer.h
 
@@ -2335,6 +2474,130 @@ proc removeTimer*(id: TimerID): bool {.importc: "SDL_RemoveTimer".}
 
 ## Section: SDL_tray.h
 
+type
+  TrayEntryFlag* {.size: sizeof(uint32).} = enum
+    Button = 0
+    Checkbox = 1
+    Submenu = 2
+    Checked = 30
+    Disabled = 31
+  TrayEntryFlags* = distinct uint32
+  
+  Tray* = object
+  TrayPtr* = ptr Tray
+
+  TrayMenu* = object
+  TrayMenuPtr* = ptr TrayMenu
+
+  TrayEntry* = object
+  TrayEntryPtr* = ptr TrayEntry
+
+  TrayCallbackCb* = proc(userdata: ptr, entry: TrayEntryPtr) {.cdecl.}
+
+proc flags*(e: varargs[TrayEntryFlag]): TrayEntryFlags {.inline.} =
+  var res: uint32 = 0
+  for val in items(e):
+    res = res or (1'u32 shl uint32(val))
+  TrayEntryFlags(res)
+
+proc createTray*(icon: SurfacePtr, tooltip: cstring): TrayPtr {.importc: "SDL_CreateTray".}
+
+proc setTrayIcon*(tray: TrayPtr, icon: SurfacePtr): void {.importc: "SDL_SetTrayIcon".}
+proc setIcon*(tray: TrayPtr, icon: SurfacePtr): void {.discardable.} =
+  setTrayIcon(tray, icon)
+proc `icon=`*(tray: TrayPtr, icon: SurfacePtr): void {.discardable.} =
+  setTrayIcon(tray, icon)
+
+proc setTrayTooltip*(tray: TrayPtr, tooltip: cstring): void {.importc: "SDL_SetTrayTooltip".}
+proc setTooltip*(tray: TrayPtr, tooltip: cstring): void {.discardable.} =
+  setTrayTooltip(tray, tooltip)
+proc `tooltip=`*(tray: TrayPtr, tooltip: cstring): void {.discardable.} =
+  setTrayTooltip(tray, tooltip)
+
+proc createTrayMenu*(tray: TrayPtr): TrayMenuPtr {.importc: "SDL_CreateTrayMenu".}
+proc createTraySubmenu*(entry: TrayEntryPtr): TrayMenuPtr {.importc: "SDL_CreateTraySubmenu".}
+
+proc getTrayMenu*(tray: TrayPtr): TrayMenu {.importc: "SDL_GetTrayMenu".}
+proc getTraySubmenu*(entry: TrayEntryPtr): TrayMenuPtr {.importc: "SDL_GetTraySubmenu".}
+
+proc getTrayEntries*(menu: TrayMenuPtr, size: ptr cint): ptr UncheckedArray[TrayEntryPtr] {.importc: "SDL_GetTrayEntries".}
+proc getTrayEntries*(menu: TrayMenuPtr): seq[TrayEntryPtr] =
+  var size: cint
+  var entries = getTrayEntries(menu, addr size)
+  result = newSeqOfCap[TrayEntryPtr](size)
+  for i in 0 ..< size:
+    result.add(entries[i])
+
+proc removeTrayEntry*(entry: TrayEntryPtr): void {.importc: "SDL_RemoveTrayEntry".}
+proc insertTrayEntryAt*(menu: TrayMenuPtr, pos: cint, label: cstring, flags: TrayEntryFlags): TrayEntryPtr {.importc: "SDL_InsertTrayEntryAt".}
+proc insertTrayEntryAt*(menu: TrayMenuPtr, pos: cint, label: cstring, flags: varargs[TrayEntryFlag]): TrayEntryPtr {.discardable.} =
+  insertTrayEntryAt(menu, pos, label, flags(flags))
+
+proc setTrayEntryLabel*(entry: TrayEntryPtr, label: cstring): void {.importc: "SDL_SetTrayEntryLabel".}
+proc setLabel*(entry: TrayEntryPtr, label: cstring): void =
+  setTrayEntryLabel(entry, label)
+proc `label=`*(entry: TrayEntryPtr, label: cstring): void =
+  setTrayEntryLabel(entry, label)
+
+proc getTrayEntryLabel*(entry: TrayEntryPtr): cstring {.importc: "SDL_GetTrayEntryLabel".}
+proc getLabel*(entry: TrayEntryPtr): cstring =
+  getTrayEntryLabel(entry)
+proc `label`*(entry: TrayEntryPtr): cstring =
+  getTrayEntryLabel(entry)
+
+proc setTrayEntryChecked*(entry: TrayEntryPtr, checked: bool): void {.importc: "SDL_SetTrayEntryChecked".}
+proc setChecked*(entry: TrayEntryPtr, checked: bool): void =
+  setTrayEntryChecked(entry, checked)
+proc `checked=`*(entry: TrayEntryPtr, checked: bool): void =
+  setTrayEntryChecked(entry, checked)
+
+proc getTrayEntryChecked*(entry: TrayEntryPtr): bool {.importc: "SDL_GetTrayEntryChecked".}
+proc getChecked*(entry: TrayEntryPtr): bool =
+  getTrayEntryChecked(entry)
+proc `checked`*(entry: TrayEntryPtr): bool =
+  getTrayEntryChecked(entry)
+
+proc setTrayEntryEnabled*(entry: TrayEntryPtr, enabled: bool): void {.importc: "SDL_SetTrayEntryEnabled".}
+proc setEnabled*(entry: TrayEntryPtr, enabled: bool): void =
+  setTrayEntryEnabled(entry, enabled)
+proc `enabled=`*(entry: TrayEntryPtr, enabled: bool): void =
+  setTrayEntryEnabled(entry, enabled)
+
+proc getTrayEntryEnabled*(entry: TrayEntryPtr): bool {.importc: "SDL_GetTrayEntryEnabled".}
+proc getEnabled*(entry: TrayEntryPtr): bool =
+  getTrayEntryEnabled(entry)
+proc `enabled`*(entry: TrayEntryPtr): bool =
+  getTrayEntryEnabled(entry)
+
+# proc setTrayEntryCallback*(entry: TrayEntryPtr, callback: TrayCallbackCb, userdata: ptr): void {.importc: "SDL_SetTrayEntryCallback".}
+# proc setCallback*(entry: TrayEntryPtr, callback: TrayCallbackCb, userdata: ptr): void {.discardable.} =
+#   setTrayEntryCallback(entry, callback, userdata)
+# proc `callback=`*(entry: TrayEntryPtr, callback: TrayCallbackCb): void {.discardable.} =
+#   setTrayEntryCallback(entry, callback, nil)
+
+proc clickTrayEntry*(entry: TrayEntryPtr): void {.importc: "SDL_ClickTrayEntry".}
+proc click*(entry: TrayEntryPtr): void =
+  clickTrayEntry(entry)
+
+proc destroyTray*(tray: TrayPtr): void {.importc: "SDL_DestroyTray".}
+proc destroy*(tray: TrayPtr): void =
+  destroyTray(tray)
+
+proc getTrayEntryParent*(entry: TrayEntryPtr): TrayMenuPtr {.importc: "SDL_GetTrayEntryParent".}
+proc getParent*(entry: TrayEntryPtr): TrayMenuPtr =
+  getTrayEntryParent(entry)
+proc `parent`*(entry: TrayEntryPtr): TrayMenuPtr =
+  getTrayEntryParent(entry)
+
+proc getTrayMenuParentEntry*(menu: TrayMenuPtr): TrayEntryPtr {.importc: "SDL_GetTrayMenuParentEntry".}
+proc getParentEntry*(menu: TrayMenuPtr): TrayEntryPtr =
+  getTrayMenuParentEntry(menu)
+
+proc getTrayMenuParentTray*(menu: TrayMenuPtr): TrayPtr {.importc: "SDL_GetTrayMenuParentTray".}
+proc getParentTray*(menu: TrayMenuPtr): TrayPtr =
+  getTrayMenuParentTray(menu)
+
+proc updateTrays*(): void {.importc: "SDL_UpdateTrays".}
 
 ## Section: SDL_touch.h
 
