@@ -14,6 +14,9 @@ else:
   const LibName* = "libSDL3.so"
 {.pop.}
 
+when defined(windows):
+  import winim/core
+
 when defined(emscripten):
   {.push callConv: cdecl.}
 else:
@@ -2283,7 +2286,7 @@ type
     country*: cstring
   
 proc getPreferredLocales*(outCount: ptr cint): ptr UncheckedArray[ptr Locale] {.importc: "SDL_GetPreferredLocales".}
-proc getPreferredLocales*(outCount: var cint): ptr UncheckedArray[ptr Locale] {.discardable.} =
+proc getPreferredLocales*(outCount: var cint): ptr UncheckedArray[ptr Locale] =
   getPreferredLocales(addr outCount)
 proc getPreferredLocales*(): seq[Locale] =
   var count: cint
@@ -2315,12 +2318,232 @@ proc openURL*(url: cstring): bool {.importc: "SDL_OpenURL".}
 
 ## Section: SDL_mouse.h
 
+type
+  MouseID* = distinct uint32
+
+  SystemCursor* {.size: sizeof(uint32).} = enum
+    Default
+    Text
+    Wait
+    Crosshair
+    Progress
+    NWSEResize
+    NEWSEResize
+    EWResize
+    NSResize
+    Move
+    NotAllowed
+    Pointer
+    NWResize
+    NResize
+    NEResize
+    EResize
+    SEResize
+    SResize
+    SWResize
+    WResize
+  
+  MouseWheelDirection* {.size: sizeof(cint).} = enum
+    Normal
+    Flipped
+  
+  MouseButtonFlag* {.size: sizeof(uint32).} = enum
+    Left   = 1 - 1,
+    Middle = 2 - 1,
+    Right  = 3 - 1,
+    X1     = 4 - 1,
+    X2     = 5 - 1,
+  MouseButtonFlags* = distinct uint32
+
+  Cursor* = object
+  CursorPtr* = ptr Cursor
+
+proc flags*(e: varargs[MouseButtonFlag]): MouseButtonFlags {.inline.} =
+  var res: uint32 = 0
+  for val in items(e):
+    res = res or (1'u32 shl uint32(val))
+  MouseButtonFlags(res)
+
+proc hasMouse*(): bool {.importc: "SDL_HasMouse".}
+
+proc getMice*(outCount: ptr cint): ptr UncheckedArray[MouseID] {.importc: "SDL_GetMice".}
+proc getMice*(outCount: var cint): ptr UncheckedArray[MouseID] =
+  getMice(addr outCount)
+proc getMice*(): seq[MouseID] =
+  var count: cint
+  var mice = getMice(addr count)
+  if mice != nil:
+    result = newSeq[MouseID](count)
+    for i in 0 ..< count:
+      result[i] = mice[i]
+  else:
+    echo getError()
+    result = @[]
+
+proc getMouseNameForID*(instanceId: MouseID): cstring {.importc: "SDL_GetMouseNameForID".}
+proc getMouseName*(instanceId: MouseID): cstring =
+  getMouseNameForID(instanceId)
+
+
+proc getMouseFocus*(): WindowPtr {.importc: "SDL_GetMouseFocus".}
+proc getMouseFocusedWindow*(): WindowPtr =
+  getMouseFocus()
+
+proc getMouseState*(x, y: ptr float32): MouseButtonFlags {.importc: "SDL_GetMouseState".}
+proc getMouseState*(x, y: var float32): MouseButtonFlags =
+  getMouseState(addr x, addr y)
+proc getMouseState*(): (float32, float32, MouseButtonFlags) =
+  var x, y: float32
+  let buttons = getMouseState(addr x, addr y)
+  (x, y, buttons)
+
+proc getGlobalMouseState*(x, y: ptr float32): MouseButtonFlags {.importc: "SDL_GetGlobalMouseState".}
+proc getGlobalMouseState*(x, y: var float32): MouseButtonFlags =
+  getGlobalMouseState(addr x, addr y)
+proc getGlobalMouseState*(): (float32, float32, MouseButtonFlags) =
+  var x, y: float32
+  let buttons = getGlobalMouseState(addr x, addr y)
+  (x, y, buttons)
+
+proc getRelativeMouseState*(x, y: ptr float32): MouseButtonFlags {.importc: "SDL_GetRelativeMouseState".}
+proc getRelativeMouseState*(x, y: var float32): MouseButtonFlags =
+  getRelativeMouseState(addr x, addr y)
+proc getRelativeMouseState*(): (float32, float32, MouseButtonFlags) =
+  var x, y: float32
+  let buttons = getRelativeMouseState(addr x, addr y)
+  (x, y, buttons)
+
+proc warpMouseInWindow*(window: WindowPtr, x, y: float32): bool {.importc: "SDL_WarpMouseInWindow".}
+proc warpMouseGlobal*(x, y: float32): bool {.importc: "SDL_WarpMouseGlobal".}
+proc warpMouse*(window: WindowPtr, x, y: float32): bool {.discardable.} =
+  warpMouseInWindow(window, x, y)
+proc warpMouse*(x, y: float32): bool {.discardable.} =
+  warpMouseGlobal(x, y)
+
+proc setWindowRelativeMouseMode*(window: WindowPtr, enabled: bool): bool {.importc: "SDL_SetWindowRelativeMouseMode".}
+proc setRelativeMouseMode*(window: WindowPtr, enabled: bool): bool {.discardable.} =
+  setWindowRelativeMouseMode(window, enabled)
+proc `relativeMouseMode=`*(window: WindowPtr, enabled: bool): bool {.discardable.} =
+  setWindowRelativeMouseMode(window, enabled)
+
+proc getWindowRelativeMouseMode*(window: WindowPtr): bool {.importc: "SDL_GetWindowRelativeMouseMode".}
+proc getRelativeMouseMode*(window: WindowPtr): bool =
+  getWindowRelativeMouseMode(window)
+proc `relativeMouseMode`*(window: WindowPtr): bool =
+  getWindowRelativeMouseMode(window)
+
+proc captureMouse*(enabled: bool): bool {.importc: "SDL_CaptureMouse".}
+proc createCursor*(data: ptr UncheckedArray[byte], mask: ptr UncheckedArray[uint8], w, h, hotX, hotY: cint): CursorPtr {.importc: "SDL_CreateCursor".}
+proc createCursor*(data: openArray[byte], mask: openArray[uint8], w, h, hotX, hotY: cint): CursorPtr =
+  createCursor(cast[ptr UncheckedArray[byte]](data), cast[ptr UncheckedArray[uint8]](mask), w, h, hotX, hotY)
+
+proc createColorCursor*(surface: SurfacePtr, hotX, hotY: cint): CursorPtr {.importc: "SDL_CreateColorCursor".}
+proc createCursor*(surface: SurfacePtr, hotX, hotY: cint): CursorPtr =
+  createColorCursor(surface, hotX, hotY)
+
+proc createSystemCursor*(id: SystemCursor): CursorPtr {.importc: "SDL_CreateSystemCursor".}
+proc createCursor*(id: SystemCursor): CursorPtr =
+  createSystemCursor(id)
+
+proc setCursor*(cursor: CursorPtr): bool {.importc: "SDL_SetCursor".}
+proc getCursor*(): CursorPtr {.importc: "SDL_GetCursor".}
+proc getDefaultCursor*(): CursorPtr {.importc: "SDL_GetDefaultCursor".}
+
+proc destroyCursor*(cursor: CursorPtr): bool {.importc: "SDL_DestroyCursor".}
+proc destroy*(cursor: CursorPtr): bool {.discardable.} =
+  destroyCursor(cursor)
+
+proc showCursor*(): bool {.importc: "SDL_ShowCursor".}
+proc hideCursor*(): bool {.importc: "SDL_HideCursor".}
+
+proc cursorVisible*(): bool {.importc: "SDL_CursorVisible".}
+proc isCursorVisible*(): bool =
+  cursorVisible()
 
 ## Section: SDL_mutex.h
 
 
+## Section: SDL_touch.h
+
+type
+  TouchID* = distinct uint64
+  FingerID* = distinct uint64
+
+  TouchDeviceType* {.size: sizeof(cint).} = enum
+    Invalid = -1
+    Direct
+    IndirectAbsolute
+    IndirectRelative
+  
+  Finger* {.bycopy.} = object
+    id: FingerID
+    x, y, pressure: float32
+
+const
+  TOUCH_MOUSEID* = TouchID(1 shl 32 - 1)
+  MOUSE_TOUCHID* = TouchID(1 shl 64 - 1)
+
+proc getTouchDevices*(outCount: ptr cint): ptr UncheckedArray[TouchID] {.importc: "SDL_GetTouchDevices".}
+proc getTouchDevices*(outCount: var cint): ptr UncheckedArray[TouchID] =
+  getTouchDevices(addr outCount)
+proc getTouchDevices*(): seq[TouchID] =
+  var count: cint
+  var devices = getTouchDevices(addr count)
+  result = newSeqOfCap[TouchID](count)
+  for i in 0 ..< count:
+    result.add(devices[i])
+
+proc getTouchDeviceName*(touchID: TouchID): cstring {.importc: "SDL_GetTouchDeviceName".}
+proc getDeviceName*(touchID: TouchID): cstring =
+  getTouchDeviceName(touchID)
+
+proc getTouchDeviceType*(touchID: TouchID): TouchDeviceType {.importc: "SDL_GetTouchDeviceType".}
+proc getDeviceType*(touchID: TouchID): TouchDeviceType =
+  getTouchDeviceType(touchID)
+
+proc getTouchFingers*(touchID: TouchID, outCount: ptr cint): ptr UncheckedArray[ptr Finger] {.importc: "SDL_GetTouchFingers".}
+proc getTouchFingers*(touchID: TouchID, outCount: var cint): ptr UncheckedArray[ptr Finger] =
+  getTouchFingers(touchID, addr outCount)
+proc getTouchFingers*(touchID: TouchID): seq[Finger] =
+  var count: cint
+  var fingers = getTouchFingers(touchID, addr count)
+  result = newSeqOfCap[Finger](count)
+  for i in 0 ..< count:
+    result.add(fingers[i][])
+
+
 ## Section: SDL_pen.h
 
+type
+  PenID* = distinct uint32
+  PenInputFlag* {.size: sizeof(uint32).} = enum
+    Down = 0,       #/**< pen is pressed down */
+    Button1 = 1,    #/**< button 1 is pressed */
+    Button2 = 2,    #/**< button 2 is pressed */
+    Button3 = 3,    #/**< button 3 is pressed */
+    Button4 = 4,    #/**< button 4 is pressed */
+    Button5 = 5,    #/**< button 5 is pressed */
+    EraserTip = 30, #/**< eraser tip is used */
+  PenInputFlags* = distinct uint32
+
+  PenAxisState* {.size: sizeof(cint).} = enum
+    Pressure = 0,            #/**< Pen pressure.  Unidirectional: 0 to 1.0 */
+    XTilt = 1,               #/**< Pen horizontal tilt angle.  Bidirectional: -90.0 to 90.0 (left-to-right). */
+    YTilt = 2,               #/**< Pen vertical tilt angle.  Bidirectional: -90.0 to 90.0 (top-to-down). */
+    Distance = 3,            #/**< Pen distance to drawing surface.  Unidirectional: 0.0 to 1.0 */
+    Rotation = 4,            #/**< Pen barrel rotation.  Bidirectional: -180 to 179.9 (clockwise, 0 is facing up, -180.0 is facing down). */
+    Slider = 5,              #/**< Pen finger wheel or slider (e.g., Airbrush Pen).  Unidirectional: 0 to 1.0 */
+    TangentialPressure = 6,   #/**< Pressure from squeezing the pen ("barrel pressure"). */
+
+const
+  PEN_MOUSEID* = MouseID((1'u32 shl 31) - 1)
+  PEN_TOUCHID* = TouchID((1'u64 shl 63) - 1)
+
+proc flags*(e: varargs[PenInputFlag]): PenInputFlags {.inline.} =
+  var res: uint32 = 0
+  for val in items(e):
+    res = res or (1'u32 shl uint32(val))
+  PenInputFlags(res)
 
 ## Section: SDL_platform.h
 
@@ -2334,6 +2557,116 @@ proc getPlatform*(): cstring {.importc: "SDL_GetPlatform".}
 
 ## Section: SDL_system.h
 
+# Windows
+when defined(windows):
+  type
+    WindowsMessageHookCb* = proc(userdata: ptr, msg: ptr winuser.MSG): bool
+  
+  proc setWindowsMessageHook*(callback: WindowsMessageHookCb, userdata: ptr): bool {.importc: "SDL_SetWindowsMessageHook".}
+  proc getDirect3D9AdapterIndex*(displayID: DisplayID): cint {.importc: "SDL_GetDirect3D9AdapterIndex".}
+  proc getDXGIOutputInfo*(displayID: DisplayID, adapterIndex: ptr cint, outputIndex: ptr cint): bool {.importc: "SDL_GetDXGIOutputInfo".}
+  proc getDXGIOutputInfo*(displayID: DisplayID, adapterIndex: var cint, outputIndex: var cint): bool {.discardable.} =
+    getDXGIOutputInfo(displayID, addr adapterIndex, addr outputIndex)
+  proc getDXGIOutputInfo*(displayID: DisplayID): (cint, cint) =
+    var adapterIndex, outputIndex: cint
+    if getDXGIOutputInfo(displayID, addr adapterIndex, addr outputIndex):
+      return (adapterIndex, outputIndex)
+    else:
+      echo getError()
+      return (0, 0)
+# Unix
+elif defined(linux) or defined(macos) or defined(unix):
+  type
+    X11EventHookCb* = proc(userdata: ptr, xevent: ptr): bool
+  
+  proc setX11EventHook*(callback: X11EventHookCb, userdata: ptr): bool {.importc: "SDL_SetX11EventHook".}
+
+# Linux
+elif defined(linux):
+  proc setLinuxThreadPriority*(threadID: int64, priority: cint): bool {.importc: "SDL_SetLinuxThreadPriority".}
+  proc setLinuxThreadPriorityAndPolicy*(threadID: int64, sdlPriority: cint, schedPolicy: cint): bool {.importc: "SDL_SetLinuxThreadPriorityAndPolicy".}
+
+# iOS
+elif defined(ios):
+  type
+    IOSAnimationCb* = proc(userdata: rawptr)
+  
+  proc setIOSAnimationCallback*(window: WindowPtr, interval: cint, callback: IOSAnimationCb, callbackParam: ptr): bool {.importc: "SDL_SetIOSAnimationCallback".}
+  proc setIOSEventPump*(enabled: bool): bool {.importc: "SDL_SetIOSEventPump".}
+
+# Android
+elif defined(android):
+  type
+    RequestAndroidPermissionCb* = proc(userdata: ptr, permission: cstring, granted: bool)
+
+  proc getAndroidJNIEnv*(): ptr {.importc: "SDL_GetAndroidJNIEnv".}
+  proc getAndroidActivity*(): ptr {.importc: "SDL_GetAndroidActivity".}
+  proc getAndroidSDKVersion*(): cint {.importc: "SDL_GetAndroidSDKVersion".}
+
+  proc isChromebook*(): bool {.importc: "SDL_IsChromebook".}
+  proc isDeXMode*(): bool {.importc: "SDL_IsDeXMode".}
+
+  proc sendAndroidBackButton*(): bool {.importc: "SDL_SendAndroidBackButton".}
+  
+  proc getAndroidInternalStoragePath*(): cstring {.importc: "SDL_GetAndroidInternalStoragePath".}
+  proc getAndroidExternalStorageState*(): uint32 {.importc: "SDL_GetAndroidExternalStorageState".}
+  proc getAndroidExternalStoragePath*(): cstring {.importc: "SDL_GetAndroidExternalStoragePath".}
+  proc getAndroidCachePath*(): cstring {.importc: "SDL_GetAndroidCachePath".}
+
+  proc requestAndroidPermission*(permission: cstring, callback: RequestAndroidPermissionCb, userdata: ptr): bool {.importc: "SDL_RequestAndroidPermission".}
+
+  proc showAndroidToast*(message: cstring, duration, gravity, xoffset, yoffset: cint): bool {.importc: "SDL_ShowAndroidToast".}
+  proc sendAndroidMessage*(command: uint32, param: cint): bool {.importc: "SDL_SendAndroidMessage".}
+
+# General
+
+type
+  Sandbox* {.size: sizeof(cint).} = enum
+    None = 0
+    UnknownContainer
+    Flatpak
+    Snap
+    MacOS
+
+proc isTablet*(): bool {.importc: "SDL_IsTablet".}
+proc isTV*(): bool {.importc: "SDL_IsTV".}
+proc getSandbox*(): Sandbox {.importc: "SDL_GetSandbox".}
+
+proc onApplicationWillTerminate*(): bool {.importc: "SDL_OnApplicationWillTerminate".}
+proc onApplicationDidReceiveMemoryWarning*(): bool {.importc: "SDL_OnApplicationDidReceiveMemoryWarning".}
+proc onApplicationWillEnterBackground*(): bool {.importc: "SDL_OnApplicationWillEnterBackground".}
+proc onApplicationDidEnterBackground*(): bool {.importc: "SDL_OnApplicationDidEnterBackground".}
+proc onApplicationWillEnterForeground*(): bool {.importc: "SDL_OnApplicationWillEnterForeground".}
+proc onApplicationDidEnterForeground*(): bool {.importc: "SDL_OnApplicationDidEnterForeground".}
+proc onApplicationDidChangeStatusBarOrientation*(): bool {.importc: "SDL_OnApplicationDidChangeStatusBarOrientation".}
+
+# GDK
+
+type
+  XTaskQueueHandle* = ptr
+  XUserHandle* = ptr
+
+proc getGDKTaskQueue*(outTaskQueue: ptr XTaskQueueHandle): bool {.importc: "SDL_GetGDKTaskQueue".}
+proc getGDKTaskQueue*(outTaskQueue: var XTaskQueueHandle): bool {.discardable.} =
+  getGDKTaskQueue(addr outTaskQueue)
+proc getGDKTaskQueue*(): XTaskQueueHandle =
+  var taskQueue: XTaskQueueHandle
+  if getGDKTaskQueue(addr taskQueue):
+    return taskQueue
+  else:
+    echo getError()
+    return nil
+
+proc getGDKDefaultUser*(outUserHandle: ptr XUserHandle): bool {.importc: "SDL_GetGDKDefaultUser".}
+proc getGDKDefaultUser*(outUserHandle: var XUserHandle): bool {.discardable.} =
+  getGDKDefaultUser(addr outUserHandle)
+proc getGDKDefaultUser*(): XUserHandle =
+  var userHandle: XUserHandle
+  if getGDKDefaultUser(addr userHandle):
+    return userHandle
+  else:
+    echo getError()
+    return nil
 
 ## Section: SDL_thread.h
 
@@ -2598,9 +2931,6 @@ proc getParentTray*(menu: TrayMenuPtr): TrayPtr =
   getTrayMenuParentTray(menu)
 
 proc updateTrays*(): void {.importc: "SDL_UpdateTrays".}
-
-## Section: SDL_touch.h
-
 
 ## Section: SDL_dialog.h
 
