@@ -4,3 +4,6 @@
 
 reference/*
 test/*.dll
+
+# Reference for true implementations (do not use as is!!!)
+generator/*

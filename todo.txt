@@ -15,12 +15,15 @@ Sections:
 [x] SDL_rect
 [x] SDL_surface
 [x] SDL_video
-[0] SDL_gpu
+[/] SDL_gpu
+    - seems to have some issues with pointers
+    - might be my graphics card? or drivers? it's as vague as it gets!....
 [/] SDL_guid
     - getting weird outputs, dunno if it's intended
 [0] SDL_hidapi
-[0] SDL_hints
+[x] SDL_hints
 [0] SDL_sensor
+[x] SDL_power
 [0] SDL_joystick
 [0] SDL_haptic
 [0] SDL_gamepad
@@ -55,7 +58,5 @@ Sections:
 [0] documentation
     - function descriptions/details (port)
 
-Experiment:
-- `var T` over `ptr T`
-
-- Simplified overloads
+[0] fix error return types for overloads:
+    - some have specific values that represent an error, whereas in most cases I just return 0 currently. 

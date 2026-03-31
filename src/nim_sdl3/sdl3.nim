@@ -348,7 +348,7 @@ proc writeS64BE*(iostream: IOStreamPtr, value: int64): bool {.importc: "SDL_Writ
 ## Section: SDL_audio.h
 
 type
-  AudioFormat* {.size: sizeof(cint).} = enum
+  AudioFormats* {.size: sizeof(cint).} = enum
     Unknown = 0x0000,
     U8 = 0x0008,
     S8 = 0x8008,
@@ -362,7 +362,7 @@ type
   AudioDeviceID* = distinct uint32
   AudioSpecPtr* = ptr AudioSpec
   AudioSpec* {.bycopy.} = object
-    format*: AudioFormat
+    format*: AudioFormats
     channels*: cint
     freq*: cint
   
@@ -372,9 +372,9 @@ type
   AudioPostmixCb* = proc(userdata: pointer, spec: AudioSpecPtr, buffer: ptr float, bufferLen: cint): void {.cdecl.}
 
 const
-  AUDIO_S16* = AudioFormat.S16LE
-  AUDIO_S32* = AudioFormat.S32LE
-  AUDIO_F32* = AudioFormat.F32LE
+  AUDIO_S16* = AudioFormats.S16LE
+  AUDIO_S32* = AudioFormats.S32LE
+  AUDIO_F32* = AudioFormats.F32LE
 
   DEVICE_DEFAULT_PLAYBACK* = AudioDeviceID(0xFFFFFFFF)
   DEVICE_DEFAULT_RECORDING* = AudioDeviceID(0xFFFFFFFE)
@@ -578,14 +578,14 @@ proc loadWavIO*(src: IOStreamPtr, closeIo: bool, spec: AudioSpecPtr, audioBuf: p
 proc loadWav*(src: IOStreamPtr, spec: AudioSpecPtr, closeIo: bool, audioBuf: ptr UncheckedArray[ptr uint8], audioLen: ptr uint32): bool =
   loadWavIO(src, closeIo, spec, audioBuf, audioLen)
 proc loadWav*(path: cstring, spec: AudioSpecPtr, audioBuf: ptr UncheckedArray[ptr uint8], audioLen: ptr uint32): bool {.importc: "SDL_LoadWAV".}
-proc mixAudio*(dst, src: ptr uint8, format: AudioFormat, len: uint32, volume: float32): bool {.importc: "SDL_MixAudio".}
+proc mixAudio*(dst, src: ptr uint8, format: AudioFormats, len: uint32, volume: float32): bool {.importc: "SDL_MixAudio".}
 proc convertAudioSamples*(srcSpec: AudioSpecPtr, srcData: ptr uint8, srcLen: cint, dstSpec: AudioSpecPtr, dstData: ptr UncheckedArray[ptr uint8], dstLen: ptr cint): bool {.importc: "SDL_ConvertAudioSamples".}
 
-proc getAudioFormatName*(format: AudioFormat): cstring {.importc: "SDL_GetAudioFormatName".}
-proc getName*(format: AudioFormat): cstring =
+proc getAudioFormatName*(format: AudioFormats): cstring {.importc: "SDL_GetAudioFormatName".}
+proc getName*(format: AudioFormats): cstring =
   getAudioFormatName(format)
-proc getSilenceValueForFormat*(format: AudioFormat): cint {.importc: "SDL_GetSilenceValueForFormat".}
-proc getSilenceValue*(format: AudioFormat): cint =
+proc getSilenceValueForFormat*(format: AudioFormats): cint {.importc: "SDL_GetSilenceValueForFormat".}
+proc getSilenceValue*(format: AudioFormats): cint =
   getSilenceValueForFormat(format)
 
 ## Section: SDL_bits.h
@@ -1913,6 +1913,761 @@ proc showSystemMenu*(window: WindowPtr, x, y: cint): bool {.discardable.} =
 
 ## Section: SDL_gpu.h
 
+type
+  GPUDevice* = object
+  GPUDevicePtr* = ptr GPUDevice
+  GPUBuffer* = object
+  GPUBufferPtr* = ptr GPUBuffer
+  GPUTransferBuffer* = object
+  GPUTransferBufferPtr* = ptr GPUTransferBuffer
+  GPUTexture* = object
+  GPUTexturePtr* = ptr GPUTexture
+  GPUSampler* = object
+  GPUSamplerPtr* = ptr GPUSampler
+  GPUShader* = object
+  GPUShaderPtr* = ptr GPUShader
+  GPUComputePipeline* = object
+  GPUComputePipelinePtr* = ptr GPUComputePipeline
+  GPUGraphicsPipeline* = object
+  GPUGraphicsPipelinePtr* = ptr GPUGraphicsPipeline
+  GPUCommandBuffer* = object
+  GPUCommandBufferPtr* = ptr GPUCommandBuffer
+  GPURenderPass* = object
+  GPURenderPassPtr* = ptr GPURenderPass
+  GPUComputePass* = object
+  GPUComputePassPtr* = ptr GPUComputePass
+  GPUCopyPass* = object
+  GPUCopyPassPtr* = ptr GPUCopyPass
+  GPUFence* = object
+  GPUFencePtr* = ptr GPUFence
+  GPUPrimitiveType* {.size: sizeof(cint).} = enum
+    Trianglelist
+    Trianglestrip
+    Linelist
+    Linestrip
+    Pointlist
+  GPULoadOp* {.size: sizeof(cint).} = enum
+    Load
+    Clear
+    DontCare
+  GPUStoreOp* {.size: sizeof(cint).} = enum
+    Store
+    DontCare
+    Resolve
+    ResolveAndStore
+  GPUIndexElementSize* {.size: sizeof(cint).} = enum
+    Bit16
+    Bit32
+  GPUTextureFormat* {.size: sizeof(cint).} = enum
+    Invalid
+
+    A8Unorm
+    R8Unorm
+    R8g8Unorm
+    R8g8b8a8Unorm
+    R16Unorm
+    R16g16Unorm
+    R16g16b16a16Unorm
+    R10g10b10a2Unorm
+    B5g6r5Unorm
+    B5g5r5a1Unorm
+    B4g4r4a4Unorm
+    B8g8r8a8Unorm
+
+    Bc1RgbaUnorm
+    Bc2RgbaUnorm
+    Bc3RgbaUnorm
+    Bc4RUnorm
+    Bc5RgUnorm
+    Bc7RgbaUnorm
+
+    Bc6hRgbFloat
+
+    Bc6hRgbUfloat
+
+    R8Snorm
+    R8g8Snorm
+    R8g8b8a8Snorm
+    R16Snorm
+    R16g16Snorm
+    R16g16b16a16Snorm
+
+    R16Float
+    R16g16Float
+    R16g16b16a16Float
+    R32Float
+    R32g32Float
+    R32g32b32a32Float
+
+    R11g11b10Ufloat
+
+    R8Uint
+    R8g8Uint
+    R8g8b8a8Uint
+    R16Uint
+    R16g16Uint
+    R16g16b16a16Uint
+    R32Uint
+    R32g32Uint
+    R32g32b32a32Uint
+
+    R8Int
+    R8g8Int
+    R8g8b8a8Int
+    R16Int
+    R16g16Int
+    R16g16b16a16Int
+    R32Int
+    R32g32Int
+    R32g32b32a32Int
+
+    R8g8b8a8UnormSrgb
+    B8g8r8a8UnormSrgb
+
+    Bc1RgbaUnormSrgb
+    Bc2RgbaUnormSrgb
+    Bc3RgbaUnormSrgb
+    Bc7RgbaUnormSrgb
+    Depth Formats
+    D16Unorm
+    D24Unorm
+    D32Float
+    D24UnormS8Uint
+    D32FloatS8Uint
+
+    ASTC_4x4_UNORM
+    ASTC_5x4_UNORM
+    ASTC_5x5_UNORM
+    ASTC_6x5_UNORM
+    ASTC_6x6_UNORM
+    ASTC_8x5_UNORM
+    ASTC_8x6_UNORM
+    ASTC_8x8_UNORM
+    ASTC_10x5_UNORM
+    ASTC_10x6_UNORM
+    ASTC_10x8_UNORM
+    ASTC_10x10_UNORM
+    ASTC_12x10_UNORM
+    ASTC_12x12_UNORM
+
+    ASTC_4x4_UNORM_SRGB
+    ASTC_5x4_UNORM_SRGB
+    ASTC_5x5_UNORM_SRGB
+    ASTC_6x5_UNORM_SRGB
+    ASTC_6x6_UNORM_SRGB
+    ASTC_8x5_UNORM_SRGB
+    ASTC_8x6_UNORM_SRGB
+    ASTC_8x8_UNORM_SRGB
+    ASTC_10x5_UNORM_SRGB
+    ASTC_10x6_UNORM_SRGB
+    ASTC_10x8_UNORM_SRGB
+    ASTC_10x10_UNORM_SRGB
+    ASTC_12x10_UNORM_SRGB
+    ASTC_12x12_UNORM_SRGB
+
+    ASTC_4x4_FLOAT
+    ASTC_5x4_FLOAT
+    ASTC_5x5_FLOAT
+    ASTC_6x5_FLOAT
+    ASTC_6x6_FLOAT
+    ASTC_8x5_FLOAT
+    ASTC_8x6_FLOAT
+    ASTC_8x8_FLOAT
+    ASTC_10x5_FLOAT
+    ASTC_10x6_FLOAT
+    ASTC_10x8_FLOAT
+    ASTC_10x10_FLOAT
+    ASTC_12x10_FLOAT
+    ASTC_12x12_FLOAT
+  GPUTextureUsageFlags* = distinct uint32
+  GPUTextureUsageFlag* {.size: sizeof(uint32).} = enum
+    Sampler = 0
+    ColorTarget = 1
+    DepthStencilTarget = 2
+    GraphicsStorageRead = 3
+    ComputeStorageRead = 4
+    ComputeStorageWrite = 5
+    ComputeStorageSimultaneousReadWrite = 6
+  GPUTextureType* {.size: sizeof(cint).} = enum
+    D2
+    D2Array
+    D3
+    Cube
+    CubeArray
+  GPUSampleCount* {.size: sizeof(cint).} = enum
+    One
+    Two
+    Four
+    Eight
+  GPUCubeMapFace* {.size: sizeof(cint).} = enum
+    Positivex
+    Negativex
+    Positivey
+    Negativey
+    Positivez
+    Negativez
+  GPUBufferUsageFlags* = distinct uint32
+  GPUBufferUsageFlag* {.size: sizeof(uint32).} = enum
+    UseVertex = 0
+    Index = 1
+    Indirect = 2
+    GraphicsStorageRead = 3
+    ComputeStorageRead = 4
+    ComputeStorageWrite = 5
+  GPUTransferBufferUsage* {.size: sizeof(cint).} = enum
+    Upload
+    Download
+  GPUShaderStage* {.size: sizeof(cint).} = enum
+    StageVertex
+    StageFragment
+  GPUShaderFormatFlags* = distinct uint32
+  GPUShaderFormatFlag* {.size: sizeof(uint32).} = enum
+    Private = 0
+    Spirv = 1
+    Dxbc = 2
+    Dxil = 3
+    Msl = 4
+    Metallib = 5
+  GPUVertexElementFormat* {.size: sizeof(cint).} = enum
+    Invalid
+
+    Int
+    Int2
+    Int3
+    Int4
+
+    Uint
+    Uint2
+    Uint3
+    Uint4
+
+    Float
+    Float2
+    Float3
+    Float4
+
+    Byte2
+    Byte4
+
+    Ubyte2
+    Ubyte4
+
+    Byte2Norm
+    Byte4Norm
+
+    Ubyte2Norm
+    Ubyte4Norm
+
+    Short2
+    Short4
+
+    Ushort2
+    Ushort4
+
+    Short2Norm
+    Short4Norm
+
+    Ushort2Norm
+    Ushort4Norm
+
+    Half2
+    Half4
+  GPUVertexInputRate* {.size: sizeof(cint).} = enum
+    IRVertex
+    Instance
+  GPUFillMode* {.size: sizeof(cint).} = enum
+    Fill
+    Line
+  GPUCullMode* {.size: sizeof(cint).} = enum
+    None
+    Front
+    Back
+  GPUFrontFace* {.size: sizeof(cint).} = enum
+    CounterClockwise
+    Clockwise
+  GPUCompareOp* {.size: sizeof(cint).} = enum
+    Invalid
+    Never
+    Less
+    Equal
+    LessOrEqual
+    Greater
+    NotEqual
+    GreaterOrEqual
+    Always
+  GPUStencilOp* {.size: sizeof(cint).} = enum
+    Invalid
+    Keep
+    Zero
+    Replace
+    IncrementAndClamp
+    DecrementAndClamp
+    Invert
+    IncrementAndWrap
+    DecrementAndWrap
+  GPUBlendOp* {.size: sizeof(cint).} = enum
+    Invalid
+    Add
+    Subtract
+    ReverseSubtract
+    Min
+    Max
+  GPUBlendFactor* {.size: sizeof(cint).} = enum
+    Invalid
+    Zero
+    One
+    SrcColor
+    OneMinusSrcColor
+    DstColor
+    OneMinusDstColor
+    SrcAlpha
+    OneMinusSrcAlpha
+    DstAlpha
+    OneMinusDstAlpha
+    ConstantColor
+    OneMinusConstantColor
+    SrcAlphaSaturate
+  GPUColorComponentFlags* = distinct uint8
+  GPUColorComponentFlag* {.size: sizeof(uint8).} = enum
+    GPUColorComponentR = 0
+    GPUColorComponentG = 1
+    GPUColorComponentB = 2
+    GPUColorComponentA = 3
+  GPUFilter* {.size: sizeof(cint).} = enum
+    Nearest
+    Linear
+  GPUSamplerMipmapMode* {.size: sizeof(cint).} = enum
+    Nearest
+    Linear
+  GPUSamplerAddressMode* {.size: sizeof(cint).} = enum
+    Repeat
+    MirroredRepeat
+    ClampToEdge
+  GPUPresentMode* {.size: sizeof(cint).} = enum
+    Vsync
+    Immediate
+    Mailbox
+  GPUSwapchainComposition* {.size: sizeof(cint).} = enum
+    Sdr
+    SdrLinear
+    HdrExtendedLinear
+    Hdr10St2084
+  GPUViewport* {.bycopy.} = object
+    x*: float32
+    y*: float32
+    w*: float32
+    h*: float32
+    minDepth*: float32
+    maxDepth*: float32
+  GPUTextureTransferInfo* {.bycopy.} = object
+    transferBuffer*: GPUTransferBufferPtr
+    offset*: uint32
+    pixelsPerRow*: uint32
+    rowsPerLayer*: uint32
+  GPUTransferBufferLocation* {.bycopy.} = object
+    transferBuffer*: GPUTransferBufferPtr
+    offset*: uint32
+  GPUTextureLocation* {.bycopy.} = object
+    texture*: GPUTexturePtr
+    mipLevel*: uint32
+    layer*: uint32
+    x*: uint32
+    y*: uint32
+    z*: uint32
+  GPUTextureRegion* {.bycopy.} = object
+    texture*: GPUTexturePtr
+    mipLevel*: uint32
+    layer*: uint32
+    x*: uint32
+    y*: uint32
+    z*: uint32
+    w*: uint32
+    h*: uint32
+    d*: uint32
+  GPUBlitRegion* {.bycopy.} = object
+    texture*: GPUTexturePtr
+    mipLevel*: uint32
+    layerOrDepthPlane*: uint32
+    x*: uint32
+    y*: uint32
+    w*: uint32
+    h*: uint32
+  GPUBufferLocation* {.bycopy.} = object
+    buffer*: ptr GPUBuffer
+    offset*: uint32
+  GPUBufferRegion* {.bycopy.} = object
+    buffer*: ptr GPUBuffer
+    offset*: uint32
+    size*: uint32
+  GPUIndirectDrawCommand* {.bycopy.} = object
+    numVertices*: uint32
+    numInstances*: uint32
+    firstVertex*: uint32
+    firstInstance*: uint32
+  GPUIndexedIndirectDrawCommand* {.bycopy.} = object
+    numIndices*: uint32
+    numInstances*: uint32
+    firstIndex*: uint32
+    vertexOffset*: int32
+    firstInstance*: uint32
+  GPUIndirectDispatchCommand* {.bycopy.} = object
+    groupcountX*: uint32
+    groupcountY*: uint32
+    groupcountZ*: uint32
+  GPUSamplerCreateInfo* {.bycopy.} = object
+    minFilter*: GPUFilter
+    magFilter*: GPUFilter
+    mipmapMode*: GPUSamplerMipmapMode
+    addressModeU*: GPUSamplerAddressMode
+    addressModeV*: GPUSamplerAddressMode
+    addressModeW*: GPUSamplerAddressMode
+    mipLodBias*: float32
+    maxAnisotropy*: float32
+    compareOp*: GPUCompareOp
+    minLod*: float32
+    maxLod*: float32
+    enableAnisotropy*: bool
+    enableCompare*: bool
+    pad1*: uint8
+    pad2*: uint8
+    props*: PropertiesID
+  GPUVertexBufferDescription* {.bycopy.} = object
+    slot*: uint32
+    pitch*: uint32
+    inputRate*: GPUVertexInputRate
+    instanceStepRate*: uint32
+  GPUVertexAttribute* {.bycopy.} = object
+    location*: uint32
+    bufferSlot*: uint32
+    format*: GPUVertexElementFormat
+    offset*: uint32
+  GPUVertexInputState* {.bycopy.} = object
+    vertexBufferDescriptions*: ptr UncheckedArray[GPUVertexBufferDescription]
+    numVertexBuffers*: uint32
+    vertexAttributes*: ptr UncheckedArray[GPUVertexAttribute]
+    numVertexAttributes*: uint32
+  GPUStencilOpState* {.bycopy.} = object
+    failOp*: GPUStencilOp
+    passOp*: GPUStencilOp
+    depthFailOp*: GPUStencilOp
+    compareOp*: GPUCompareOp
+  GPUColorTargetBlendState* {.bycopy.} = object
+    srcColorBlendfactor*: GPUBlendFactor
+    dstColorBlendfactor*: GPUBlendFactor
+    colorBlendOp*: GPUBlendOp
+    srcAlphaBlendfactor*: GPUBlendFactor
+    dstAlphaBlendfactor*: GPUBlendFactor
+    alphaBlendOp*: GPUBlendOp
+    colorWriteMask*: GPUColorComponentFlags
+    enableBlend*: bool
+    enableColorWriteMask*: bool
+    pad1*: uint8
+    pad2*: uint8
+  GPUShaderCreateInfo* {.bycopy.} = object
+    codeSize*: uint
+    code*: ptr UncheckedArray[uint8]
+    entrypoint*: cstring
+    format*: GPUShaderFormatFlags
+    stage*: GPUShaderStage
+    numSamplers*: uint32
+    numStorageTextures*: uint32
+    numStorageBuffers*: uint32
+    numUniformBuffers*: uint32
+    props*: PropertiesID
+  GPUTextureCreateInfo* {.bycopy.} = object
+    gputciType*: GPUTextureType
+    format*: GPUTextureFormat
+    usage*: GPUTextureUsageFlags
+    width*: uint32
+    height*: uint32
+    layerCountOrDepth*: uint32
+    numLevels*: uint32
+    sampleCount*: GPUSampleCount
+    props*: PropertiesID
+  GPUBufferCreateInfo* {.bycopy.} = object
+    usage*: GPUBufferUsageFlags
+    size*: uint32
+    props*: PropertiesID
+  GPUTransferBufferCreateInfo* {.bycopy.} = object
+    usage*: GPUTransferBufferUsage
+    size*: uint32
+    props*: PropertiesID
+  GPURasterizerState* {.bycopy.} = object
+    fillMode*: GPUFillMode
+    cullMode*: GPUCullMode
+    frontFace*: GPUFrontFace
+    depthBiasConstantFactor*: float32
+    depthBiasClamp*: float32
+    depthBiasSlopeFactor*: float32
+    enableDepthBias*: bool
+    enableDepthClip*: bool
+    pad1*: uint8
+    pad2*: uint8
+  GPUMultisampleState* {.bycopy.} = object
+    sampleCount*: GPUSampleCount
+    sampleMask*: uint32
+    enableMask*: bool
+    pad1*: uint8
+    pad2*: uint8
+    pad3*: uint8
+  GPUDepthStencilState* {.bycopy.} = object
+    compareOp*: GPUCompareOp
+    backStencilState*: GPUStencilOpState
+    frontStencilState*: GPUStencilOpState
+    compareMask*: uint8
+    writeMask*: uint8
+    enableDepthTest*: bool
+    enableDepthWrite*: bool
+    enableStencilTest*: bool
+    pad1*: uint8
+    pad2*: uint8
+    pad3*: uint8
+  GPUColorTargetDescription* {.bycopy.} = object
+    format*: GPUTextureFormat
+    blendState*: GPUColorTargetBlendState
+  GPUGraphicsPipelineTargetInfo* {.bycopy.} = object
+    colorTargetDescriptions*: ptr UncheckedArray[GPUColorTargetDescription]
+    numColorTargets*: uint32
+    depthStencilFormat*: GPUTextureFormat
+    hasDepthStencilTarget*: bool
+    pad1*: uint8
+    pad2*: uint8
+    pad3*: uint8
+  GPUGraphicsPipelineCreateInfo* {.bycopy.} = object
+    vertexShader*: GPUShaderPtr
+    fragmentShader*: GPUShaderPtr
+    vertexInputState*: GPUVertexInputState
+    primitiveType*: GPUPrimitiveType
+    rasterizerState*: GPURasterizerState
+    multisampleState*: GPUMultisampleState
+    depthStencilState*: GPUDepthStencilState
+    targetInfo*: GPUGraphicsPipelineTargetInfo
+    props*: PropertiesID
+  GPUComputePipelineCreateInfo* {.bycopy.} = object
+    codeSize*: uint
+    code*: ptr UncheckedArray[uint8]
+    entrypoint*: cstring
+    format*: GPUShaderFormatFlags
+    numSamplers*: uint32
+    numReadonlyStorageTextures*: uint32
+    numReadonlyStorageBuffers*: uint32
+    numReadwriteStorageTextures*: uint32
+    numReadwriteStorageBuffers*: uint32
+    numUniformBuffers*: uint32
+    threadcountX*: uint32
+    threadcountY*: uint32
+    threadcountZ*: uint32
+    props*: PropertiesID
+  GPUColorTargetInfo* {.bycopy.} = object
+    texture*: GPUTexturePtr
+    mipLevel*: uint32
+    layerOrDepthPlane*: uint32
+    clearColor*: FColor
+    loadOp*: GPULoadOp
+    storeOp*: GPUStoreOp
+    resolveTexture*: GPUTexturePtr
+    resolveMipLevel*: uint32
+    resolveLayer*: uint32
+    cycle*: bool
+    cycleResolveTexture*: bool
+    pad1*: uint8
+    pad2*: uint8
+  GPUDepthStencilTargetInfo* {.bycopy.} = object
+    texture*: GPUTexturePtr
+    clearDepth*: float32
+    loadOp*: GPULoadOp
+    storeOp*: GPUStoreOp
+    stencilLoadOp*: GPULoadOp
+    stencilStoreOp*: GPUStoreOp
+    cycle*: bool
+    clearStencil*: uint8
+    pad1*: uint8
+    pad2*: uint8
+  GPUDepthStencilTargetInfoPtr* = ptr GPUDepthStencilTargetInfo
+  GPUBlitInfo* {.bycopy.} = object
+    source*: GPUBlitRegion
+    destination*: GPUBlitRegion
+    loadOp*: GPULoadOp
+    clearColor*: FColor
+    flipMode*: FlipMode
+    filter*: GPUFilter
+    cycle*: bool
+    pad1*: uint8
+    pad2*: uint8
+    pad3*: uint8
+  GPUBufferBinding* {.bycopy.} = object
+    buffer*: GPUBufferPtr
+    offset*: uint32
+  GPUTextureSamplerBinding* {.bycopy.} = object
+    texture*: GPUTexturePtr
+    sampler*: GPUSamplerPtr
+  GPUStorageBufferReadWriteBinding* {.bycopy.} = object
+    buffer*: GPUBufferPtr
+    cycle*: bool
+    pad1*: uint8
+    pad2*: uint8
+    pad3*: uint8
+  GPUStorageTextureReadWriteBinding* {.bycopy.} = object
+    texture*: GPUTexturePtr
+    mipLevel*: uint32
+    layer*: uint32
+    cycle*: bool
+    pad1*: uint8
+    pad2*: uint8
+    pad3*: uint8
+
+proc flags*(e: varargs[GPUShaderFormatFlag]): GPUShaderFormatFlags {.inline.} =
+  var res: uint32 = 0
+  for val in items(e):
+    res = res or (1'u32 shl uint32(val))
+  GPUShaderFormatFlags(res)
+
+proc gpuSupportsShaderFormats*(formatFlags: GPUShaderFormatFlags, name: cstring): bool {.importc: "SDL_GPUSupportsShaderFormats".}
+proc gpuSupportsShaderFormats*(formatFlags: openArray[GPUShaderFormatFlag], name: cstring = ""): bool =
+  gpuSupportsShaderFormats(formatFlags, if name == "": nil else: name)
+proc gpuSupportsShaderFormats*(formatFlags: varargs[GPUShaderFormatFlag], name: cstring): bool =
+  gpuSupportsShaderFormats(flags(formatFlags), name)
+proc gpuSupportsProperties*(props: PropertiesID): bool {.importc: "SDL_GPUSupportsProperties".}
+
+proc createGPUDevice*(formatFlags: GPUShaderFormatFlags, debugMode: bool, name: cstring): GPUDevicePtr {.importc: "SDL_CreateGPUDevice".}
+proc createGPUDevice*(formatFlags: openArray[GPUShaderFormatFlag], debugMode: bool, name: cstring): GPUDevicePtr =
+  createGPUDevice(flags(formatFlags), debugMode, name)
+proc createGPUDeviceWithProperties*(props: PropertiesID): GPUDevicePtr {.importc: "SDL_CreateGPUDeviceWithProperties".}
+proc destroyGPUDevice*(device: GPUDevicePtr): void {.importc: "SDL_DestroyGPUDevice".}
+proc destroy*(device: GPUDevicePtr): void =
+  destroyGPUDevice(device)
+proc getNumGPUDrivers*(): cint {.importc: "SDL_GetNumGPUDrivers".}
+proc getGPUDriver*(index: cint): cstring {.importc: "SDL_GetGPUDriver".}
+proc getGPUDeviceDriver*(device: GPUDevicePtr): cstring {.importc: "SDL_GetGPUDeviceDriver".}
+proc getDriver*(device: GPUDevicePtr): cstring =
+  getGPUDeviceDriver(device)
+proc getGPUShaderFormats*(device: GPUDevicePtr): GPUShaderFormatFlags {.importc: "SDL_GetGPUShaderFormats".}
+proc getShaderFormats*(device: GPUDevicePtr): GPUShaderFormatFlags =
+  getGPUShaderFormats(device)
+
+proc createGPUComputePipeline*(device: GPUDevicePtr, createinfo: GPUComputePipelineCreateInfo): GPUComputePipelinePtr {.importc: "SDL_CreateGPUComputePipeline".}
+proc createGPUGraphicsPipeline*(device: GPUDevicePtr, createinfo: GPUGraphicsPipelineCreateInfo): GPUGraphicsPipelinePtr {.importc: "SDL_CreateGPUGraphicsPipeline".}
+proc createGPUSampler*(device: GPUDevicePtr, createinfo: GPUSamplerCreateInfo): GPUSamplerPtr {.importc: "SDL_CreateGPUSampler".}
+proc createGPUShader*(device: GPUDevicePtr, createinfo: GPUShaderCreateInfo): GPUShaderPtr {.importc: "SDL_CreateGPUShader".}
+proc createGPUTexture*(device: GPUDevicePtr, createinfo: GPUTextureCreateInfo): GPUTexturePtr {.importc: "SDL_CreateGPUTexture".}
+proc createGPUBuffer*(device: GPUDevicePtr, createinfo: GPUBufferCreateInfo): GPUBufferPtr {.importc: "SDL_CreateGPUBuffer".}
+proc createGPUTransferBuffer*(device: GPUDevicePtr, createinfo: GPUTransferBufferCreateInfo): GPUTransferBufferPtr {.importc: "SDL_CreateGPUTransferBuffer".}
+
+proc setGPUBufferName*(device: GPUDevicePtr, buffer: GPUBufferPtr, text: cstring): void {.importc: "SDL_SetGPUBufferName".}
+proc setGPUTextureName*(device: GPUDevicePtr, texture: GPUTexturePtr, text: cstring): void {.importc: "SDL_SetGPUTextureName".}
+proc insertGPUDebugLabel*(commandBuffer: GPUCommandBufferPtr, text: cstring): void {.importc: "SDL_InsertGPUDebugLabel".}
+
+proc pushGPUDebugGroup*(commandBuffer: GPUCommandBufferPtr, name: cstring): void {.importc: "SDL_PushGPUDebugGroup".}
+proc popGPUDebugGroup*(commandBuffer: GPUCommandBufferPtr): void {.importc: "SDL_PopGPUDebugGroup".}
+
+proc releaseGPUTexture*(device: GPUDevicePtr, texture: GPUTexturePtr): void {.importc: "SDL_ReleaseGPUTexture".}
+proc releaseGPUSampler*(device: GPUDevicePtr, sampler: GPUSamplerPtr): void {.importc: "SDL_ReleaseGPUSampler".}
+proc releaseGPUBuffer*(device: GPUDevicePtr, buffer: GPUBufferPtr): void {.importc: "SDL_ReleaseGPUBuffer".}
+proc releaseGPUTransferBuffer*(device: GPUDevicePtr, transferBuffer: GPUTransferBufferPtr): void {.importc: "SDL_ReleaseGPUTransferBuffer".}
+proc releaseGPUComputePipeline*(device: GPUDevicePtr, computePipeline: GPUComputePipelinePtr): void {.importc: "SDL_ReleaseGPUComputePipeline".}
+proc releaseGPUShader*(device: GPUDevicePtr, shader: GPUShaderPtr): void {.importc: "SDL_ReleaseGPUShader".}
+proc releaseGPUGraphicsPipeline*(device: GPUDevicePtr, graphicsPipeline: GPUGraphicsPipelinePtr): void {.importc: "SDL_ReleaseGPUGraphicsPipeline".}
+proc acquireGPUCommandBuffer*(device: GPUDevicePtr): GPUCommandBufferPtr {.importc: "SDL_AcquireGPUCommandBuffer".}
+
+proc pushGPUVertexUniformData*(commandBuffer: GPUCommandBufferPtr, slotIndex: uint32, data: pointer, length: uint32): void {.importc: "SDL_PushGPUVertexUniformData".}
+proc pushGPUFragmentUniformData*(commandBuffer: GPUCommandBufferPtr, slotIndex: uint32, data: pointer, length: uint32): void {.importc: "SDL_PushGPUFragmentUniformData".}
+proc pushGPUComputeUniformData*(commandBuffer: GPUCommandBufferPtr, slotIndex: uint32, data: pointer, length: uint32): void {.importc: "SDL_PushGPUComputeUniformData".}
+
+proc beginGPURenderPass*(commandBuffer: GPUCommandBufferPtr, colorTargetInfos: ptr UncheckedArray[GPUColorTargetInfo], numColorTargets: uint32, depthStencilTargetInfo: GPUDepthStencilTargetInfoPtr): GPURenderPassPtr {.importc: "SDL_BeginGPURenderPass".}
+
+proc bindGPUGraphicsPipeline*(renderPass: GPURenderPassPtr, graphicsPipeline: GPUGraphicsPipelinePtr): void {.importc: "SDL_BindGPUGraphicsPipeline".}
+
+proc setGPUViewport*(renderPass: GPURenderPassPtr, viewport: GPUViewport): void {.importc: "SDL_SetGPUViewport".}
+proc setGPUScissor*(renderPass: GPURenderPassPtr, scissor: Rect): void {.importc: "SDL_SetGPUScissor".}
+proc setGPUBlendConstants*(renderPass: GPURenderPassPtr, blendConstants: FColor): void {.importc: "SDL_SetGPUBlendConstants".}
+proc setGPUStencilReference*(renderPass: GPURenderPassPtr, reference: uint8): void {.importc: "SDL_SetGPUStencilReference".}
+
+proc bindGPUVertexBuffers*(renderPass: GPURenderPassPtr, firstSlot: uint32, bindings: ptr UncheckedArray[GPUBufferBinding], numBindings: uint32): void {.importc: "SDL_BindGPUVertexBuffers".}
+proc bindGPUIndexBuffer*(renderPass: GPURenderPassPtr, binding: GPUBufferBinding, indexElementSize: GPUIndexElementSize): void {.importc: "SDL_BindGPUIndexBuffer".}
+proc bindGPUVertexSamplers*(renderPass: GPURenderPassPtr, firstSlot: uint32, textureSamplerBindings: ptr UncheckedArray[GPUTextureSamplerBinding], numBindings: uint32): void {.importc: "SDL_BindGPUVertexSamplers".}
+proc bindGPUVertexStorageTextures*(renderPass: GPURenderPassPtr, firstSlot: uint32, storageTextures: ptr UncheckedArray[GPUTexturePtr], numBindings: uint32): void {.importc: "SDL_BindGPUVertexStorageTextures".}
+proc bindGPUVertexStorageBuffers*(renderPass: GPURenderPassPtr, firstSlot: uint32, storageBuffers: ptr UncheckedArray[GPUBufferPtr], numBindings: uint32): void {.importc: "SDL_BindGPUVertexStorageBuffers".}
+proc bindGPUFragmentSamplers*(renderPass: GPURenderPassPtr, firstSlot: uint32, textureSamplerBindings: ptr UncheckedArray[GPUTextureSamplerBinding], numBindings: uint32): void {.importc: "SDL_BindGPUFragmentSamplers".}
+proc bindGPUFragmentStorageTextures*(renderPass: GPURenderPassPtr, firstSlot: uint32, storageTextures: ptr UncheckedArray[GPUTexturePtr], numBindings: uint32): void {.importc: "SDL_BindGPUFragmentStorageTextures".}
+proc bindGPUFragmentStorageBuffers*(renderPass: GPURenderPassPtr, firstSlot: uint32, storageBuffers: ptr UncheckedArray[GPUBufferPtr], numBindings: uint32): void {.importc: "SDL_BindGPUFragmentStorageBuffers".}
+
+proc drawGPUIndexedPrimitives*(renderPass: GPURenderPassPtr, numIndices: uint32, numInstances: uint32, firstIndex: uint32, vertexOffset: int32, firstInstance: uint32): void {.importc: "SDL_DrawGPUIndexedPrimitives".}
+proc drawGPUPrimitives*(renderPass: GPURenderPassPtr, numVertices: uint32, numInstances: uint32, firstVertex: uint32, firstInstance: uint32): void {.importc: "SDL_DrawGPUPrimitives".}
+proc drawGPUPrimitivesIndirect*(renderPass: GPURenderPassPtr, buffer: GPUBufferPtr, offset: uint32, drawCount: uint32): void {.importc: "SDL_DrawGPUPrimitivesIndirect".}
+proc drawGPUIndexedPrimitivesIndirect*(renderPass: GPURenderPassPtr, buffer: GPUBufferPtr, offset: uint32, drawCount: uint32): void {.importc: "SDL_DrawGPUIndexedPrimitivesIndirect".}
+
+proc endGPURenderPass*(renderPass: GPURenderPassPtr): void {.importc: "SDL_EndGPURenderPass".}
+
+proc beginGPUComputePass*(commandBuffer: GPUCommandBufferPtr, storageTextureBindings: ptr UncheckedArray[GPUStorageTextureReadWriteBinding], numStorageTextureBindings: uint32, storageBufferBindings: ptr UncheckedArray[GPUStorageBufferReadWriteBinding], numStorageBufferBindings: uint32): GPUComputePassPtr {.importc: "SDL_BeginGPUComputePass".}
+proc bindGPUComputePipeline*(computePass: GPUComputePassPtr, computePipeline: GPUComputePipelinePtr): void {.importc: "SDL_BindGPUComputePipeline".}
+proc bindGPUComputeSamplers*(computePass: GPUComputePassPtr, firstSlot: uint32, textureSamplerBindings: ptr UncheckedArray[GPUTextureSamplerBinding], numBindings: uint32): void {.importc: "SDL_BindGPUComputeSamplers".}
+proc bindGPUComputeStorageTextures*(computePass: GPUComputePassPtr, firstSlot: uint32, storageTextures: ptr UncheckedArray[GPUTexturePtr], numBindings: uint32): void {.importc: "SDL_BindGPUComputeStorageTextures".}
+proc bindGPUComputeStorageBuffers*(computePass: GPUComputePassPtr, firstSlot: uint32, storageBuffers: ptr UncheckedArray[GPUBufferPtr], numBindings: uint32): void {.importc: "SDL_BindGPUComputeStorageBuffers".}
+
+proc dispatchGPUCompute*(computePass: GPUComputePassPtr, groupcountX, groupcountY, groupcountZ: uint32): void {.importc: "SDL_DispatchGPUCompute".}
+proc dispatchGPUComputeIndirect*(computePass: GPUComputePassPtr, buffer: GPUBufferPtr, offset: uint32): void {.importc: "SDL_DispatchGPUComputeIndirect".}
+
+proc endGPUComputePass*(computePass: GPUComputePassPtr): void {.importc: "SDL_EndGPUComputePass".}
+
+proc mapGPUTransferBuffer*(device: GPUDevicePtr, transferBuffer: GPUTransferBufferPtr, cycle: bool): pointer {.importc: "SDL_MapGPUTransferBuffer".}
+proc unmapGPUTransferBuffer*(device: GPUDevicePtr, transferBuffer: GPUTransferBufferPtr): void {.importc: "SDL_UnmapGPUTransferBuffer".}
+
+proc beginGPUCopyPass*(commandBuffer: GPUCommandBufferPtr): GPUCopyPassPtr {.importc: "SDL_BeginGPUCopyPass".}
+
+proc uploadToGPUTexture*(copyPass: GPUCopyPassPtr, source: GPUTextureTransferInfo, destination: GPUTextureRegion, cycle: bool): void {.importc: "SDL_UploadToGPUTexture".}
+proc uploadToGPUBuffer*(copyPass: GPUCopyPassPtr, source: GPUTransferBufferLocation, destination: GPUBufferRegion, cycle: bool): void {.importc: "SDL_UploadToGPUBuffer".}
+
+proc copyGPUTextureToTexture*(copyPass: GPUCopyPassPtr, source: GPUTextureLocation, destination: GPUTextureLocation, w, h, d: uint32, cycle: bool): void {.importc: "SDL_CopyGPUTextureToTexture".}
+proc copyGPUBufferToBuffer*(copyPass: GPUCopyPassPtr, source: GPUBufferLocation, destination: GPUBufferLocation, size: uint32, cycle: bool): void {.importc: "SDL_CopyGPUBufferToBuffer".}
+
+proc downloadFromGPUTexture*(copyPass: GPUCopyPassPtr, source: GPUTextureRegion, destination: GPUTextureTransferInfo): void {.importc: "SDL_DownloadFromGPUTexture".}
+proc downloadFromGPUBuffer*(copyPass: GPUCopyPassPtr, source: GPUBufferRegion, destination: GPUTransferBufferLocation): void {.importc: "SDL_DownloadFromGPUBuffer".}
+
+proc endGPUCopyPass*(copyPass: GPUCopyPassPtr): void {.importc: "SDL_EndGPUCopyPass".}
+
+proc generateMipmapsForGPUTexture*(commandBuffer: GPUCommandBufferPtr, texture: GPUTexturePtr): void {.importc: "SDL_GenerateMipmapsForGPUTexture".}
+proc blitGPUTexture*(commandBuffer: GPUCommandBufferPtr, info: GPUBlitInfo): void {.importc: "SDL_BlitGPUTexture".}
+
+proc windowSupportsGPUSwapchainComposition*(device: GPUDevicePtr, window: WindowPtr, swapchainComposition: GPUSwapchainComposition): bool {.importc: "SDL_WindowSupportsGPUSwapchainComposition".}
+proc windowSupportsGPUPresentMode*(device: GPUDevicePtr, window: WindowPtr, presentMode: GPUPresentMode): bool {.importc: "SDL_WindowSupportsGPUPresentMode".}
+
+proc claimWindowForGPUDevice*(device: GPUDevicePtr, window: WindowPtr): bool {.importc: "SDL_ClaimWindowForGPUDevice".}
+proc claimWindow*(device: GPUDevicePtr, window: WindowPtr): bool {.discardable.} =
+  claimWindowForGPUDevice(device, window)
+
+proc releaseWindowFromGPUDevice*(device: GPUDevicePtr, window: WindowPtr): void {.importc: "SDL_ReleaseWindowFromGPUDevice".}
+proc releaseWindow*(device: GPUDevicePtr, window: WindowPtr): void {.discardable.} =
+  releaseWindowFromGPUDevice(device, window)
+
+proc setGPUSwapchainParameters*(device: GPUDevicePtr, window: WindowPtr, swapchainComposition: GPUSwapchainComposition, presentMode: GPUPresentMode): bool {.importc: "SDL_SetGPUSwapchainParameters".}
+
+proc setGPUAllowedFramesInFlight*(device: GPUDevicePtr, allowedFramesInFlight: uint32): bool {.importc: "SDL_SetGPUAllowedFramesInFlight".}
+
+proc getGPUSwapchainTextureFormat*(device: GPUDevicePtr, window: WindowPtr): GPUTextureFormat {.importc: "SDL_GetGPUSwapchainTextureFormat".}
+
+proc acquireGPUSwapchainTexture*(commandBuffer: GPUCommandBufferPtr, window: WindowPtr, swapchainTexture: ptr GPUTexturePtr, swapchainTextureWidth, swapchainTextureHeight: ptr uint32): bool {.importc: "SDL_AcquireGPUSwapchainTexture".}
+proc waitForGPUSwapchain*(device: GPUDevicePtr, window: WindowPtr): bool {.importc: "SDL_WaitForGPUSwapchain".}
+proc waitAndAcquireGPUSwapchainTexture*(commandBuffer: GPUCommandBufferPtr, window: WindowPtr, swapchainTexture: ptr GPUTexturePtr, swapchainTextureWidth, swapchainTextureHeight: ptr uint32): bool {.importc: "SDL_WaitAndAcquireGPUSwapchainTexture".}
+
+proc submitGPUCommandBuffer*(commandBuffer: GPUCommandBufferPtr): bool {.importc: "SDL_SubmitGPUCommandBuffer".}
+proc submitGPUCommandBufferAndAcquireFence*(commandBuffer: GPUCommandBufferPtr): GPUFencePtr {.importc: "SDL_SubmitGPUCommandBufferAndAcquireFence".}
+proc cancelGPUCommandBuffer*(commandBuffer: GPUCommandBufferPtr): bool {.importc: "SDL_CancelGPUCommandBuffer".}
+
+proc waitForGPUIdle*(device: GPUDevicePtr): bool {.importc: "SDL_WaitForGPUIdle".}
+
+proc waitForGPUFences*(device: GPUDevicePtr, waitAll: bool, fences: ptr UncheckedArray[GPUFencePtr], numFences: uint32): bool {.importc: "SDL_WaitForGPUFences".}
+proc queryGPUFence*(device: GPUDevicePtr, fence: GPUFencePtr): bool {.importc: "SDL_QueryGPUFence".}
+proc releaseGPUFence*(device: GPUDevicePtr, fence: GPUFencePtr): void {.importc: "SDL_ReleaseGPUFence".}
+
+proc gpuTextureFormatTexelBlockSize*(format: GPUTextureFormat): uint32 {.importc: "SDL_GPUTextureFormatTexelBlockSize".}
+proc gpuTextureSupportsFormat*(device: GPUDevicePtr, format: GPUTextureFormat, textureType: GPUTextureType, usage: GPUTextureUsageFlags): bool {.importc: "SDL_GPUTextureSupportsFormat".}
+proc gpuTextureSupportsSampleCount*(device: GPUDevicePtr, format: GPUTextureFormat, sampleCount: GPUSampleCount): bool {.importc: "SDL_GPUTextureSupportsSampleCount".}
+
+proc calculateGPUTextureFormatSize*(format: GPUTextureFormat, width, height: uint32, depthOrLayerCount: uint32): uint32 {.importc: "SDL_CalculateGPUTextureFormatSize".}
+
+proc gdkSuspendGPU*(device: GPUDevicePtr): void {.importc: "SDL_GDKSuspendGPU".}
+proc gdkResumeGPU*(device: GPUDevicePtr): void {.importc: "SDL_GDKResumeGPU".}
+
 
 ## Section: SDL_guid.h
 
@@ -1942,6 +2697,326 @@ proc toGuid*(pchGUID: cstring): Guid {.discardable.} =
 
 ## Section: SDL_hints.h
 
+type
+  Hint* = distinct string
+
+  HintPriority* {.size: sizeof(cint).} = enum
+    Default
+    Normal
+    Override
+  
+  HintCb* = proc(userdata: ptr, name: cstring, oldValue, newValue: cstring): void {.cdecl.}
+
+const
+  HINT_ALLOW_ALT_TAB_WHILE_GRABBED* = Hint("SDL_ALLOW_ALT_TAB_WHILE_GRABBED")
+
+  HINT_ANDROID_ALLOW_RECREATE_ACTIVITY* = Hint("SDL_ANDROID_ALLOW_RECREATE_ACTIVITY")
+  HINT_ANDROID_BLOCK_ON_PAUSE* = Hint("SDL_ANDROID_BLOCK_ON_PAUSE")
+  HINT_ANDROID_LOW_LATENCY_AUDIO* = Hint("SDL_ANDROID_LOW_LATENCY_AUDIO")
+  HINT_ANDROID_TRAP_BACK_BUTTON* = Hint("SDL_ANDROID_TRAP_BACK_BUTTON")
+
+  HINT_APP_ID* = Hint("SDL_APP_ID")
+  HINT_APP_NAME* = Hint("SDL_APP_NAME")
+
+  HINT_APPLE_TV_CONTROLLER_UI_EVENTS* = Hint("SDL_APPLE_TV_CONTROLLER_UI_EVENTS")
+  HINT_APPLE_TV_REMOTE_ALLOW_ROTATION* = Hint("SDL_APPLE_TV_REMOTE_ALLOW_ROTATION")
+
+  HINT_AUDIO_ALSA_DEFAULT_DEVICE* = Hint("SDL_AUDIO_ALSA_DEFAULT_DEVICE")
+  HINT_AUDIO_ALSA_DEFAULT_PLAYBACK_DEVICE* = Hint("SDL_AUDIO_ALSA_DEFAULT_PLAYBACK_DEVICE")
+  HINT_AUDIO_ALSA_DEFAULT_RECORDING_DEVICE* = Hint("SDL_AUDIO_ALSA_DEFAULT_RECORDING_DEVICE")
+
+  HINT_AUDIO_CATEGORY* = Hint("SDL_AUDIO_CATEGORY")
+  HINT_AUDIO_CHANNELS* = Hint("SDL_AUDIO_CHANNELS")
+
+  HINT_AUDIO_DEVICE_APP_ICON_NAME* = Hint("SDL_AUDIO_DEVICE_APP_ICON_NAME")
+  HINT_AUDIO_DEVICE_SAMPLE_FRAMES* = Hint("SDL_AUDIO_DEVICE_SAMPLE_FRAMES")
+  HINT_AUDIO_DEVICE_STREAM_NAME* = Hint("SDL_AUDIO_DEVICE_STREAM_NAME")
+  HINT_AUDIO_DEVICE_STREAM_ROLE* = Hint("SDL_AUDIO_DEVICE_STREAM_ROLE")
+
+  HINT_AUDIO_DISK_INPUT_FILE* = Hint("SDL_AUDIO_DISK_INPUT_FILE")
+  HINT_AUDIO_DISK_OUTPUT_FILE* = Hint("SDL_AUDIO_DISK_OUTPUT_FILE")
+  HINT_AUDIO_DISK_TIMESCALE* = Hint("SDL_AUDIO_DISK_TIMESCALE")
+
+  HINT_AUDIO_DRIVER* = Hint("SDL_AUDIO_DRIVER")
+  HINT_AUDIO_DUMMY_TIMESCALE* = Hint("SDL_AUDIO_DUMMY_TIMESCALE")
+  HINT_AUDIO_FORMAT* = Hint("SDL_AUDIO_FORMAT")
+  HINT_AUDIO_FREQUENCY* = Hint("SDL_AUDIO_FREQUENCY")
+  HINT_AUDIO_INCLUDE_MONITORS* = Hint("SDL_AUDIO_INCLUDE_MONITORS")
+
+  HINT_AUTO_UPDATE_JOYSTICKS* = Hint("SDL_AUTO_UPDATE_JOYSTICKS")
+  HINT_AUTO_UPDATE_SENSORS* = Hint("SDL_AUTO_UPDATE_SENSORS")
+
+  HINT_BMP_SAVE_LEGACY_FORMAT* = Hint("SDL_BMP_SAVE_LEGACY_FORMAT")
+
+  HINT_CAMERA_DRIVER* = Hint("SDL_CAMERA_DRIVER")
+
+  HINT_CPU_FEATURE_MASK* = Hint("SDL_CPU_FEATURE_MASK")
+
+  HINT_JOYSTICK_DIRECTINPUT* = Hint("SDL_JOYSTICK_DIRECTINPUT")
+
+  HINT_FILE_DIALOG_DRIVER* = Hint("SDL_FILE_DIALOG_DRIVER")
+
+  HINT_DISPLAY_USABLE_BOUNDS* = Hint("SDL_DISPLAY_USABLE_BOUNDS")
+
+  HINT_EMSCRIPTEN_ASYNCIFY* = Hint("SDL_EMSCRIPTEN_ASYNCIFY")
+  HINT_EMSCRIPTEN_CANVAS_SELECTOR* = Hint("SDL_EMSCRIPTEN_CANVAS_SELECTOR")
+  HINT_EMSCRIPTEN_KEYBOARD_ELEMENT* = Hint("SDL_EMSCRIPTEN_KEYBOARD_ELEMENT")
+
+  HINT_ENABLE_SCREEN_KEYBOARD* = Hint("SDL_ENABLE_SCREEN_KEYBOARD")
+
+  HINT_EVDEV_DEVICES* = Hint("SDL_EVDEV_DEVICES")
+
+  HINT_EVENT_LOGGING* = Hint("SDL_EVENT_LOGGING")
+
+  HINT_FORCE_RAISEWINDOW* = Hint("SDL_FORCE_RAISEWINDOW")
+
+  HINT_FRAMEBUFFER_ACCELERATION* = Hint("SDL_FRAMEBUFFER_ACCELERATION")
+
+  HINT_GAMECONTROLLERCONFIG* = Hint("SDL_GAMECONTROLLERCONFIG")
+  HINT_GAMECONTROLLERCONFIG_FILE* = Hint("SDL_GAMECONTROLLERCONFIG_FILE")
+  HINT_GAMECONTROLLERTYPE* = Hint("SDL_GAMECONTROLLERTYPE")
+  HINT_GAMECONTROLLER_IGNORE_DEVICES* = Hint("SDL_GAMECONTROLLER_IGNORE_DEVICES")
+  HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT* = Hint("SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT")
+  HINT_GAMECONTROLLER_SENSOR_FUSION* = Hint("SDL_GAMECONTROLLER_SENSOR_FUSION")
+
+  HINT_GDK_TEXTINPUT_DEFAULT_TEXT* = Hint("SDL_GDK_TEXTINPUT_DEFAULT_TEXT")
+  HINT_GDK_TEXTINPUT_DESCRIPTION* = Hint("SDL_GDK_TEXTINPUT_DESCRIPTION")
+  HINT_GDK_TEXTINPUT_MAX_LENGTH* = Hint("SDL_GDK_TEXTINPUT_MAX_LENGTH")
+  HINT_GDK_TEXTINPUT_SCOPE* = Hint("SDL_GDK_TEXTINPUT_SCOPE")
+  HINT_GDK_TEXTINPUT_TITLE* = Hint("SDL_GDK_TEXTINPUT_TITLE")
+
+  HINT_HIDAPI_LIBUSB* = Hint("SDL_HIDAPI_LIBUSB")
+  HINT_HIDAPI_LIBUSB_WHITELIST* = Hint("SDL_HIDAPI_LIBUSB_WHITELIST")
+  HINT_HIDAPI_UDEV* = Hint("SDL_HIDAPI_UDEV")
+  HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS* = Hint("SDL_HIDAPI_ENUMERATE_ONLY_CONTROLLERS")
+  HINT_HIDAPI_IGNORE_DEVICES* = Hint("SDL_HIDAPI_IGNORE_DEVICES")
+
+  HINT_GPU_DRIVER* = Hint("SDL_GPU_DRIVER")
+
+  HINT_IME_IMPLEMENTED_UI* = Hint("SDL_IME_IMPLEMENTED_UI")
+
+  HINT_IOS_HIDE_HOME_INDICATOR* = Hint("SDL_IOS_HIDE_HOME_INDICATOR")
+
+  HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS* = Hint("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS")
+  HINT_JOYSTICK_ARCADESTICK_DEVICES* = Hint("SDL_JOYSTICK_ARCADESTICK_DEVICES")
+  HINT_JOYSTICK_ARCADESTICK_DEVICES_EXCLUDED* = Hint("SDL_JOYSTICK_ARCADESTICK_DEVICES_EXCLUDED")
+  HINT_JOYSTICK_BLACKLIST_DEVICES* = Hint("SDL_JOYSTICK_BLACKLIST_DEVICES")
+  HINT_JOYSTICK_BLACKLIST_DEVICES_EXCLUDED* = Hint("SDL_JOYSTICK_BLACKLIST_DEVICES_EXCLUDED")
+  HINT_JOYSTICK_DEVICE* = Hint("SDL_JOYSTICK_DEVICE")
+  HINT_JOYSTICK_ENHANCED_REPORTS* = Hint("SDL_JOYSTICK_ENHANCED_REPORTS")
+  HINT_JOYSTICK_FLIGHTSTICK_DEVICES* = Hint("SDL_JOYSTICK_FLIGHTSTICK_DEVICES")
+  HINT_JOYSTICK_FLIGHTSTICK_DEVICES_EXCLUDED* = Hint("SDL_JOYSTICK_FLIGHTSTICK_DEVICES_EXCLUDED")
+  HINT_JOYSTICK_GAMEINPUT* = Hint("SDL_JOYSTICK_GAMEINPUT")
+  HINT_JOYSTICK_GAMECUBE_DEVICES* = Hint("SDL_JOYSTICK_GAMECUBE_DEVICES")
+  HINT_JOYSTICK_GAMECUBE_DEVICES_EXCLUDED* = Hint("SDL_JOYSTICK_GAMECUBE_DEVICES_EXCLUDED")
+
+  HINT_JOYSTICK_HIDAPI* = Hint("SDL_JOYSTICK_HIDAPI")
+  HINT_JOYSTICK_HIDAPI_COMBINE_JOY_CONS* = Hint("SDL_JOYSTICK_HIDAPI_COMBINE_JOY_CONS")
+  HINT_JOYSTICK_HIDAPI_GAMECUBE* = Hint("SDL_JOYSTICK_HIDAPI_GAMECUBE")
+  HINT_JOYSTICK_HIDAPI_GAMECUBE_RUMBLE_BRAKE* = Hint("SDL_JOYSTICK_HIDAPI_GAMECUBE_RUMBLE_BRAKE")
+  HINT_JOYSTICK_HIDAPI_JOY_CONS* = Hint("SDL_JOYSTICK_HIDAPI_JOY_CONS")
+  HINT_JOYSTICK_HIDAPI_JOYCON_HOME_LED* = Hint("SDL_JOYSTICK_HIDAPI_JOYCON_HOME_LED")
+  HINT_JOYSTICK_HIDAPI_LUNA* = Hint("SDL_JOYSTICK_HIDAPI_LUNA")
+  HINT_JOYSTICK_HIDAPI_NINTENDO_CLASSIC* = Hint("SDL_JOYSTICK_HIDAPI_NINTENDO_CLASSIC")
+  HINT_JOYSTICK_HIDAPI_PS3* = Hint("SDL_JOYSTICK_HIDAPI_PS3")
+  HINT_JOYSTICK_HIDAPI_PS3_SIXAXIS_DRIVER* = Hint("SDL_JOYSTICK_HIDAPI_PS3_SIXAXIS_DRIVER")
+  HINT_JOYSTICK_HIDAPI_PS4* = Hint("SDL_JOYSTICK_HIDAPI_PS4")
+  HINT_JOYSTICK_HIDAPI_PS4_REPORT_INTERVAL* = Hint("SDL_JOYSTICK_HIDAPI_PS4_REPORT_INTERVAL")
+  HINT_JOYSTICK_HIDAPI_PS5* = Hint("SDL_JOYSTICK_HIDAPI_PS5")
+  HINT_JOYSTICK_HIDAPI_PS5_PLAYER_LED* = Hint("SDL_JOYSTICK_HIDAPI_PS5_PLAYER_LED")
+  HINT_JOYSTICK_HIDAPI_SHIELD* = Hint("SDL_JOYSTICK_HIDAPI_SHIELD")
+  HINT_JOYSTICK_HIDAPI_STADIA* = Hint("SDL_JOYSTICK_HIDAPI_STADIA")
+  HINT_JOYSTICK_HIDAPI_STEAM* = Hint("SDL_JOYSTICK_HIDAPI_STEAM")
+  HINT_JOYSTICK_HIDAPI_STEAM_HOME_LED* = Hint("SDL_JOYSTICK_HIDAPI_STEAM_HOME_LED")
+  HINT_JOYSTICK_HIDAPI_STEAMDECK* = Hint("SDL_JOYSTICK_HIDAPI_STEAMDECK")
+  HINT_JOYSTICK_HIDAPI_STEAM_HORI* = Hint("SDL_JOYSTICK_HIDAPI_STEAM_HORI")
+  HINT_JOYSTICK_HIDAPI_SWITCH* = Hint("SDL_JOYSTICK_HIDAPI_SWITCH")
+  HINT_JOYSTICK_HIDAPI_SWITCH_HOME_LED* = Hint("SDL_JOYSTICK_HIDAPI_SWITCH_HOME_LED")
+  HINT_JOYSTICK_HIDAPI_SWITCH_PLAYER_LED* = Hint("SDL_JOYSTICK_HIDAPI_SWITCH_PLAYER_LED")
+  HINT_JOYSTICK_HIDAPI_VERTICAL_JOY_CONS* = Hint("SDL_JOYSTICK_HIDAPI_VERTICAL_JOY_CONS")
+  HINT_JOYSTICK_HIDAPI_WII* = Hint("SDL_JOYSTICK_HIDAPI_WII")
+  HINT_JOYSTICK_HIDAPI_WII_PLAYER_LED* = Hint("SDL_JOYSTICK_HIDAPI_WII_PLAYER_LED")
+  HINT_JOYSTICK_HIDAPI_XBOX* = Hint("SDL_JOYSTICK_HIDAPI_XBOX")
+  HINT_JOYSTICK_HIDAPI_XBOX_360* = Hint("SDL_JOYSTICK_HIDAPI_XBOX_360")
+  HINT_JOYSTICK_HIDAPI_XBOX_360_PLAYER_LED* = Hint("SDL_JOYSTICK_HIDAPI_XBOX_360_PLAYER_LED")
+  HINT_JOYSTICK_HIDAPI_XBOX_360_WIRELESS* = Hint("SDL_JOYSTICK_HIDAPI_XBOX_360_WIRELESS")
+  HINT_JOYSTICK_HIDAPI_XBOX_ONE* = Hint("SDL_JOYSTICK_HIDAPI_XBOX_ONE")
+  HINT_JOYSTICK_HIDAPI_XBOX_ONE_HOME_LED* = Hint("SDL_JOYSTICK_HIDAPI_XBOX_ONE_HOME_LED")
+
+  HINT_JOYSTICK_IOKIT* = Hint("SDL_JOYSTICK_IOKIT")
+  HINT_JOYSTICK_LINUX_CLASSIC* = Hint("SDL_JOYSTICK_LINUX_CLASSIC")
+  HINT_JOYSTICK_LINUX_DEADZONES* = Hint("SDL_JOYSTICK_LINUX_DEADZONES")
+  HINT_JOYSTICK_LINUX_DIGITAL_HATS* = Hint("SDL_JOYSTICK_LINUX_DIGITAL_HATS")
+  HINT_JOYSTICK_LINUX_HAT_DEADZONES* = Hint("SDL_JOYSTICK_LINUX_HAT_DEADZONES")
+  HINT_JOYSTICK_MFI* = Hint("SDL_JOYSTICK_MFI")
+  HINT_JOYSTICK_RAWINPUT* = Hint("SDL_JOYSTICK_RAWINPUT")
+  HINT_JOYSTICK_RAWINPUT_CORRELATE_XINPUT* = Hint("SDL_JOYSTICK_RAWINPUT_CORRELATE_XINPUT")
+  HINT_JOYSTICK_ROG_CHAKRAM* = Hint("SDL_JOYSTICK_ROG_CHAKRAM")
+  HINT_JOYSTICK_THREAD* = Hint("SDL_JOYSTICK_THREAD")
+  HINT_JOYSTICK_THROTTLE_DEVICES* = Hint("SDL_JOYSTICK_THROTTLE_DEVICES")
+  HINT_JOYSTICK_THROTTLE_DEVICES_EXCLUDED* = Hint("SDL_JOYSTICK_THROTTLE_DEVICES_EXCLUDED")
+  HINT_JOYSTICK_WGI* = Hint("SDL_JOYSTICK_WGI")
+  HINT_JOYSTICK_WHEEL_DEVICES* = Hint("SDL_JOYSTICK_WHEEL_DEVICES")
+  HINT_JOYSTICK_WHEEL_DEVICES_EXCLUDED* = Hint("SDL_JOYSTICK_WHEEL_DEVICES_EXCLUDED")
+  HINT_JOYSTICK_ZERO_CENTERED_DEVICES* = Hint("SDL_JOYSTICK_ZERO_CENTERED_DEVICES")
+  HINT_JOYSTICK_HAPTIC_AXES* = Hint("SDL_JOYSTICK_HAPTIC_AXES")
+
+  HINT_KEYCODE_OPTIONS* = Hint("SDL_KEYCODE_OPTIONS")
+
+  HINT_KMSDRM_DEVICE_INDEX* = Hint("SDL_KMSDRM_DEVICE_INDEX")
+  HINT_KMSDRM_REQUIRE_DRM_MASTER* = Hint("SDL_KMSDRM_REQUIRE_DRM_MASTER")
+
+  HINT_LOGGING* = Hint("SDL_LOGGING")
+
+  HINT_MAC_BACKGROUND_APP* = Hint("SDL_MAC_BACKGROUND_APP")
+  HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK* = Hint("SDL_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK")
+  HINT_MAC_OPENGL_ASYNC_DISPATCH* = Hint("SDL_MAC_OPENGL_ASYNC_DISPATCH")
+  HINT_MAC_OPTION_AS_ALT* = Hint("SDL_MAC_OPTION_AS_ALT")
+  HINT_MAC_SCROLL_MOMENTUM* = Hint("SDL_MAC_SCROLL_MOMENTUM")
+
+  HINT_MAIN_CALLBACK_RATE* = Hint("SDL_MAIN_CALLBACK_RATE")
+
+  HINT_MOUSE_AUTO_CAPTURE* = Hint("SDL_MOUSE_AUTO_CAPTURE")
+  HINT_MOUSE_DOUBLE_CLICK_RADIUS* = Hint("SDL_MOUSE_DOUBLE_CLICK_RADIUS")
+  HINT_MOUSE_DOUBLE_CLICK_TIME* = Hint("SDL_MOUSE_DOUBLE_CLICK_TIME")
+  HINT_MOUSE_DEFAULT_SYSTEM_CURSOR* = Hint("SDL_MOUSE_DEFAULT_SYSTEM_CURSOR")
+  HINT_MOUSE_EMULATE_WARP_WITH_RELATIVE* = Hint("SDL_MOUSE_EMULATE_WARP_WITH_RELATIVE")
+  HINT_MOUSE_FOCUS_CLICKTHROUGH* = Hint("SDL_MOUSE_FOCUS_CLICKTHROUGH")
+  HINT_MOUSE_NORMAL_SPEED_SCALE* = Hint("SDL_MOUSE_NORMAL_SPEED_SCALE")
+  HINT_MOUSE_RELATIVE_MODE_CENTER* = Hint("SDL_MOUSE_RELATIVE_MODE_CENTER")
+  HINT_MOUSE_RELATIVE_SPEED_SCALE* = Hint("SDL_MOUSE_RELATIVE_SPEED_SCALE")
+  HINT_MOUSE_RELATIVE_SYSTEM_SCALE* = Hint("SDL_MOUSE_RELATIVE_SYSTEM_SCALE")
+  HINT_MOUSE_RELATIVE_WARP_MOTION* = Hint("SDL_MOUSE_RELATIVE_WARP_MOTION")
+  HINT_MOUSE_RELATIVE_CURSOR_VISIBLE* = Hint("SDL_MOUSE_RELATIVE_CURSOR_VISIBLE")
+  HINT_MOUSE_TOUCH_EVENTS* = Hint("SDL_MOUSE_TOUCH_EVENTS")
+
+  HINT_MUTE_CONSOLE_KEYBOARD* = Hint("SDL_MUTE_CONSOLE_KEYBOARD")
+
+  HINT_NO_SIGNAL_HANDLERS* = Hint("SDL_NO_SIGNAL_HANDLERS")
+
+  HINT_OPENGL_LIBRARY* = Hint("SDL_OPENGL_LIBRARY")
+  HINT_EGL_LIBRARY* = Hint("SDL_EGL_LIBRARY")
+  HINT_OPENGL_ES_DRIVER* = Hint("SDL_OPENGL_ES_DRIVER")
+  HINT_OPENVR_LIBRARY* = Hint("SDL_OPENVR_LIBRARY")
+
+  HINT_ORIENTATIONS* = Hint("SDL_ORIENTATIONS")
+  HINT_POLL_SENTINEL* = Hint("SDL_POLL_SENTINEL")
+  HINT_PREFERRED_LOCALES* = Hint("SDL_PREFERRED_LOCALES")
+  HINT_QUIT_ON_LAST_WINDOW_CLOSE* = Hint("SDL_QUIT_ON_LAST_WINDOW_CLOSE")
+
+  HINT_RENDER_DIRECT3D_THREADSAFE* = Hint("SDL_RENDER_DIRECT3D_THREADSAFE")
+  HINT_RENDER_DIRECT3D11_DEBUG* = Hint("SDL_RENDER_DIRECT3D11_DEBUG")
+  HINT_RENDER_VULKAN_DEBUG* = Hint("SDL_RENDER_VULKAN_DEBUG")
+  HINT_RENDER_GPU_DEBUG* = Hint("SDL_RENDER_GPU_DEBUG")
+  HINT_RENDER_GPU_LOW_POWER* = Hint("SDL_RENDER_GPU_LOW_POWER")
+  HINT_RENDER_DRIVER* = Hint("SDL_RENDER_DRIVER")
+  HINT_RENDER_LINE_METHOD* = Hint("SDL_RENDER_LINE_METHOD")
+  HINT_RENDER_METAL_PREFER_LOW_POWER_DEVICE* = Hint("SDL_RENDER_METAL_PREFER_LOW_POWER_DEVICE")
+  HINT_RENDER_VSYNC* = Hint("SDL_RENDER_VSYNC")
+  
+  HINT_RETURN_KEY_HIDES_IME* = Hint("SDL_RETURN_KEY_HIDES_IME")
+
+  HINT_ROG_GAMEPAD_MICE* = Hint("SDL_ROG_GAMEPAD_MICE")
+  HINT_ROG_GAMEPAD_MICE_EXCLUDED* = Hint("SDL_ROG_GAMEPAD_MICE_EXCLUDED")
+
+  HINT_RPI_VIDEO_LAYER* = Hint("SDL_RPI_VIDEO_LAYER")
+  HINT_SCREENSAVER_INHIBIT_ACTIVITY_NAME* = Hint("SDL_SCREENSAVER_INHIBIT_ACTIVITY_NAME")
+
+  HINT_SHUTDOWN_DBUS_ON_QUIT* = Hint("SDL_SHUTDOWN_DBUS_ON_QUIT")
+
+  HINT_STORAGE_TITLE_DRIVER* = Hint("SDL_STORAGE_TITLE_DRIVER")
+  HINT_STORAGE_USER_DRIVER* = Hint("SDL_STORAGE_USER_DRIVER")
+
+  HINT_THREAD_FORCE_REALTIME_TIME_CRITICAL* = Hint("SDL_THREAD_FORCE_REALTIME_TIME_CRITICAL")
+  HINT_THREAD_PRIORITY_POLICY* = Hint("SDL_THREAD_PRIORITY_POLICY")
+
+  HINT_TIMER_RESOLUTION* = Hint("SDL_TIMER_RESOLUTION")
+  HINT_TOUCH_MOUSE_EVENTS* = Hint("SDL_TOUCH_MOUSE_EVENTS")
+  HINT_TRACKPAD_IS_TOUCH_ONLY* = Hint("SDL_TRACKPAD_IS_TOUCH_ONLY")
+  HINT_TV_REMOTE_AS_JOYSTICK* = Hint("SDL_TV_REMOTE_AS_JOYSTICK")
+
+  HINT_VIDEO_ALLOW_SCREENSAVER* = Hint("SDL_VIDEO_ALLOW_SCREENSAVER")
+  HINT_VIDEO_DISPLAY_PRIORITY* = Hint("SDL_VIDEO_DISPLAY_PRIORITY")
+  HINT_VIDEO_DOUBLE_BUFFER* = Hint("SDL_VIDEO_DOUBLE_BUFFER")
+  HINT_VIDEO_DRIVER* = Hint("SDL_VIDEO_DRIVER")
+  HINT_VIDEO_DUMMY_SAVE_FRAMES* = Hint("SDL_VIDEO_DUMMY_SAVE_FRAMES")
+  HINT_VIDEO_EGL_ALLOW_GETDISPLAY_FALLBACK* = Hint("SDL_VIDEO_EGL_ALLOW_GETDISPLAY_FALLBACK")
+  HINT_VIDEO_FORCE_EGL* = Hint("SDL_VIDEO_FORCE_EGL")
+  HINT_VIDEO_MAC_FULLSCREEN_SPACES* = Hint("SDL_VIDEO_MAC_FULLSCREEN_SPACES")
+  HINT_VIDEO_MAC_FULLSCREEN_MENU_VISIBILITY* = Hint("SDL_VIDEO_MAC_FULLSCREEN_MENU_VISIBILITY")
+  HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS* = Hint("SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS")
+  HINT_VIDEO_OFFSCREEN_SAVE_FRAMES* = Hint("SDL_VIDEO_OFFSCREEN_SAVE_FRAMES")
+  HINT_VIDEO_SYNC_WINDOW_OPERATIONS* = Hint("SDL_VIDEO_SYNC_WINDOW_OPERATIONS")
+  HINT_VIDEO_WAYLAND_ALLOW_LIBDECOR* = Hint("SDL_VIDEO_WAYLAND_ALLOW_LIBDECOR")
+  HINT_VIDEO_WAYLAND_MODE_EMULATION* = Hint("SDL_VIDEO_WAYLAND_MODE_EMULATION")
+  HINT_VIDEO_WAYLAND_MODE_SCALING* = Hint("SDL_VIDEO_WAYLAND_MODE_SCALING")
+  HINT_VIDEO_WAYLAND_PREFER_LIBDECOR* = Hint("SDL_VIDEO_WAYLAND_PREFER_LIBDECOR")
+  HINT_VIDEO_WAYLAND_SCALE_TO_DISPLAY* = Hint("SDL_VIDEO_WAYLAND_SCALE_TO_DISPLAY")
+  HINT_VIDEO_WIN_D3DCOMPILER* = Hint("SDL_VIDEO_WIN_D3DCOMPILER")
+  HINT_VIDEO_X11_EXTERNAL_WINDOW_INPUT* = Hint("SDL_VIDEO_X11_EXTERNAL_WINDOW_INPUT")
+  HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR* = Hint("SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR")
+  HINT_VIDEO_X11_NET_WM_PING* = Hint("SDL_VIDEO_X11_NET_WM_PING")
+  HINT_VIDEO_X11_NODIRECTCOLOR* = Hint("SDL_VIDEO_X11_NODIRECTCOLOR")
+  HINT_VIDEO_X11_SCALING_FACTOR* = Hint("SDL_VIDEO_X11_SCALING_FACTOR")
+  HINT_VIDEO_X11_VISUALID* = Hint("SDL_VIDEO_X11_VISUALID")
+  HINT_VIDEO_X11_WINDOW_VISUALID* = Hint("SDL_VIDEO_X11_WINDOW_VISUALID")
+  HINT_VIDEO_X11_XRANDR* = Hint("SDL_VIDEO_X11_XRANDR")
+
+  HINT_VITA_ENABLE_BACK_TOUCH* = Hint("SDL_VITA_ENABLE_BACK_TOUCH")
+  HINT_VITA_ENABLE_FRONT_TOUCH* = Hint("SDL_VITA_ENABLE_FRONT_TOUCH")
+  HINT_VITA_MODULE_PATH* = Hint("SDL_VITA_MODULE_PATH")
+  HINT_VITA_PVR_INIT* = Hint("SDL_VITA_PVR_INIT")
+  HINT_VITA_RESOLUTION* = Hint("SDL_VITA_RESOLUTION")
+  HINT_VITA_PVR_OPENGL* = Hint("SDL_VITA_PVR_OPENGL")
+  HINT_VITA_TOUCH_MOUSE_DEVICE* = Hint("SDL_VITA_TOUCH_MOUSE_DEVICE")
+
+  HINT_VULKAN_DISPLAY* = Hint("SDL_VULKAN_DISPLAY")
+  HINT_VULKAN_LIBRARY* = Hint("SDL_VULKAN_LIBRARY")
+
+  HINT_WAVE_FACT_CHUNK* = Hint("SDL_WAVE_FACT_CHUNK")
+  HINT_WAVE_CHUNK_LIMIT* = Hint("SDL_WAVE_CHUNK_LIMIT")
+  HINT_WAVE_RIFF_CHUNK_SIZE* = Hint("SDL_WAVE_RIFF_CHUNK_SIZE")
+  HINT_WAVE_TRUNCATION* = Hint("SDL_WAVE_TRUNCATION")
+
+  HINT_WINDOW_ACTIVATE_WHEN_RAISED* = Hint("SDL_WINDOW_ACTIVATE_WHEN_RAISED")
+  HINT_WINDOW_ACTIVATE_WHEN_SHOWN* = Hint("SDL_WINDOW_ACTIVATE_WHEN_SHOWN")
+  HINT_WINDOW_ALLOW_TOPMOST* = Hint("SDL_WINDOW_ALLOW_TOPMOST")
+  HINT_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN* = Hint("SDL_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN")
+  HINT_WINDOWS_CLOSE_ON_ALT_F4* = Hint("SDL_WINDOWS_CLOSE_ON_ALT_F4")
+  HINT_WINDOWS_ENABLE_MENU_MNEMONICS* = Hint("SDL_WINDOWS_ENABLE_MENU_MNEMONICS")
+  HINT_WINDOWS_ENABLE_MESSAGELOOP* = Hint("SDL_WINDOWS_ENABLE_MESSAGELOOP")
+  HINT_WINDOWS_GAMEINPUT* = Hint("SDL_WINDOWS_GAMEINPUT")
+  HINT_WINDOWS_RAW_KEYBOARD* = Hint("SDL_WINDOWS_RAW_KEYBOARD")
+  HINT_WINDOWS_FORCE_SEMAPHORE_KERNEL* = Hint("SDL_WINDOWS_FORCE_SEMAPHORE_KERNEL")
+  HINT_WINDOWS_INTRESOURCE_ICON* = Hint("SDL_WINDOWS_INTRESOURCE_ICON")
+  HINT_WINDOWS_INTRESOURCE_ICON_SMALL* = Hint("SDL_WINDOWS_INTRESOURCE_ICON_SMALL")
+  HINT_WINDOWS_USE_D3D9EX* = Hint("SDL_WINDOWS_USE_D3D9EX")
+  HINT_WINDOWS_ERASE_BACKGROUND_MODE* = Hint("SDL_WINDOWS_ERASE_BACKGROUND_MODE")
+
+  HINT_X11_FORCE_OVERRIDE_REDIRECT* = Hint("SDL_X11_FORCE_OVERRIDE_REDIRECT")
+  HINT_X11_WINDOW_TYPE* = Hint("SDL_X11_WINDOW_TYPE")
+  HINT_X11_XCB_LIBRARY* = Hint("SDL_X11_XCB_LIBRARY")
+  
+  HINT_XINPUT_ENABLED* = Hint("SDL_XINPUT_ENABLED")
+
+  HINT_ASSERT* = Hint("SDL_ASSERT")
+
+  HINT_PEN_MOUSE_EVENTS* = Hint("SDL_PEN_MOUSE_EVENTS")
+  HINT_PEN_TOUCH_EVENTS* = Hint("SDL_PEN_TOUCH_EVENTS")
+
+proc getHint*(name: Hint): cstring {.importc: "SDL_GetHint".}
+proc getHintBoolean*(name: Hint, defaultValue: bool): bool {.importc: "SDL_GetHintBoolean".}
+
+proc setHint*(name: Hint, value: cstring): bool {.importc: "SDL_SetHint".}
+proc setHintWithPriority*(name: Hint, value: cstring, priority: HintPriority): bool {.importc: "SDL_SetHintWithPriority".}
+proc setHint*(name: Hint, value: cstring, priority: HintPriority): bool {.discardable.} =
+  setHintWithPriority(name, value, priority)
+
+proc resetHint*(name: Hint): bool {.importc: "SDL_ResetHint".}
+proc resetHints*(): bool {.importc: "SDL_ResetHints".}
+
+proc addHintCallback*(name: Hint, callback: HintCb, userdata: ptr): bool {.importc: "SDL_AddHintCallback".}
+proc removeHintCallback*(name: Hint, callback: HintCb, userdata: ptr): bool {.importc: "SDL_RemoveHintCallback".}
 
 ## Section: SDL_sensor.h
 
@@ -2669,6 +3744,29 @@ proc getGDKDefaultUser*(): XUserHandle =
     return nil
 
 ## Section: SDL_thread.h
+
+## Section: SDL_power.h
+
+type
+  PowerState* {.size: sizeof(cint).} = enum
+    Error = -1,   #/**< error determining power status */
+    Unknown,      #/**< cannot determine power status */
+    OnBattery,   #/**< Not plugged in, running on the battery */
+    NoBattery,   #/**< Plugged in, no battery available */
+    Charging,     #/**< Plugged in, charging battery */
+    Charged,      #/**< Plugged in, battery charged */
+
+proc getPowerInfo*(outSeconds: ptr cint, outPercent: ptr cint): PowerState {.importc: "SDL_GetPowerInfo".}
+proc getPowerInfo*(outSeconds: var cint, outPercent: var cint): PowerState {.discardable.} =
+  getPowerInfo(addr outSeconds, addr outPercent)
+proc getPowerInfo*(): (PowerState, cint, cint) =
+  var seconds, percent: cint
+  let state = getPowerInfo(addr seconds, addr percent)
+  if state != PowerState.Error:
+    return (state, seconds, percent)
+  else:
+    echo getError()
+    return (PowerState.Error, -1, -1)
 
 
 ## Section: SDL_time.h

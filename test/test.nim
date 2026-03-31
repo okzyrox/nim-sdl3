@@ -43,7 +43,13 @@ proc main() =
   else:
     echo "Window and Renderer created successfully!"
 
-  echo "Renderer: " & $renderer.getName()
+  let device = createGPUDevice([Spirv], true, nil)
+  if device.isNil:
+    echo "Failed to create GPU device"
+    quitSDL()
+  else:
+    echo "GPU Device created successfully!"
+    echo "GPU Driver: ", device.getDriver()
 
   var evt: Event
   var quit = false
